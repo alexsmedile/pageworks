@@ -106,13 +106,32 @@ When pageworks runs alone:
 
 ## Active Development
 
-Pageworks is at v0.1.0 — first release. Tracked work lives in `.spectacular/requests/` (yes, pageworks uses spectacular for its own internal workspace; the two are designed to compose). Public docs/ for pageworks itself are deferred to `public-docs-dogfood` (planned after pageworks-agents).
+Pageworks is at v0.1.0 — first release. Tracked work lives in `.spectacular/requests/` (yes, pageworks uses spectacular for its own internal workspace; the two are designed to compose).
 
-Future requests:
+### Active Requests
 
-- `pageworks-agents` — design and ship `docs-writer`, `docs-reviewer`, optionally `docs-architect` as Tier-4 agents that pageworks spawns
-- `pageworks-maintenance-v2` — drift detection improvements (spec mtime vs page `updated:`, screenshot freshness)
-- `pageworks-renderers-more` — community-contributed Mintlify / Fumadocs adapters
+| Slug | Status | Priority | Target | Summary |
+|---|---|---|---|---|
+| `pageworks-agents` | planned (gated) | high | v0.2.0 | Tier-4 subagents (docs-writer + docs-reviewer, optional docs-architect) that pageworks spawns for multi-page authoring work |
+| `public-docs-dogfood` | planned | medium | v0.3.0 | Use pageworks to author pageworks's own docs/; deploy to GitHub Pages; canonical example of what pageworks produces |
+| `pageworks-maintenance-v2` | planned (gated) | low | v0.4.0 | Drift detection improvements: `sync-ack` verb, multi-source `synced_from:`, screenshot freshness, optional content-hash awareness |
+| `pageworks-renderers-more` | planned (gated) | low | v0.5.x | Additional renderer adapters (Mintlify, Fumadocs, etc.) — community-contribution-driven |
+
+**Gated** = activation triggers documented in the PLAN; don't start until they fire. **Planned** without "gated" = ready to start whenever priority comes up.
+
+Each request lives in `.spectacular/requests/<slug>/` with `PLAN.md` + `TASKS.md`. Use spectacular CLI (`spectacular status`, `spectacular new`, `spectacular archive`) to manage them.
+
+### Sequencing logic
+
+```
+v0.1.0 ✓ first release (CLI + skill + refs + templates + tests)
+v0.2.0 → pageworks-agents (when authoring friction surfaces)
+v0.3.0 → public-docs-dogfood (depends on agents being optional, not required)
+v0.4.0 → pageworks-maintenance-v2 (when drift false-positives become real)
+v0.5.x → pageworks-renderers-more (per-renderer patch releases as PRs arrive)
+```
+
+This isn't a fixed roadmap — priority shifts with real signal. The 2-of-3 activation rule in each gated PLAN is the gate; don't preempt it because "we have time."
 
 ## Vault Tools / General-Purpose Tools
 
