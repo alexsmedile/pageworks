@@ -1,0 +1,23 @@
+{
+  "name": "pageworks",
+  "version": "0.1.0",
+  "description": "Public-facing documentation skill — owns docs/ scaffold, schema, authoring, renderer export, and maintenance.",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "pageworks",
+    "shortDescription": "Write docs that don't rot.",
+    "longDescription": "Pageworks owns everything inside a project's docs/ folder: scaffold, schema, page authoring with Diátaxis templates, renderer export to MkDocs Material and Docusaurus, drift detection, and maintenance as specs change. Standalone-capable on any project; pairs cleanly with spectacular for internal/external doc separation.",
+    "developerName": "Alessandro Smedile",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/alexsmedile/pageworks",
+    "defaultPrompt": [
+      "/pageworks",
+      "pageworks init",
+      "pageworks new <page>",
+      "pageworks export mkdocs",
+      "pageworks doctor"
+    ],
+    "brandColor": "#7c3aed"
+  }
+}

@@ -1,0 +1,955 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ── constants ────────────────────────────────────────────────────────────────
+PAGEWORKS_VERSION="0.1.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TODAY="$(date +%Y-%m-%d)"
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+die()  { echo "Error: $*" >&2; exit 1; }
+info() { echo "$*"; }
+skip() { echo "  ⊘  $*"; }
+created() { echo "  ✓  $*"; }
+filled() { echo "  ✓  $* (filled empty stub)"; }
+
+require_value() {
+  local flag="$1"
+  local val="${2:-}"
+  [[ -n "$val" ]] || die "$flag requires a value"
+  [[ "$val" != -* ]] || die "$flag requires a value (got '$val' — looks like another flag)"
+}
+
+is_empty_file() {
+  local path="$1"
+  [[ ! -s "$path" ]] && return 0
+  ! grep -q '[^[:space:]]' "$path" 2>/dev/null
+}
+
+in_list() {
+  local needle="$1" haystack="$2"
+  local IFS=$' \t\n'
+  for item in $haystack; do
+    [[ "$item" == "$needle" ]] && return 0
+  done
+  return 1
+}
+
+slug_from_dir() {
+  basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//'
+}
+
+write_if_missing() {
+  local path="$1"; shift
+  if [[ -e "$path" ]]; then
+    if is_empty_file "$path"; then
+      printf '%s' "$*" > "$path"
+      filled "$path"
+    else
+      skip "$path"
+    fi
+  else
+    mkdir -p "$(dirname "$path")"
+    printf '%s' "$*" > "$path"
+    created "$path"
+  fi
+}
+
+# ── usage ────────────────────────────────────────────────────────────────────
+top_usage() {
+  cat <<EOF
+pageworks v${PAGEWORKS_VERSION} — public-facing documentation
+
+Usage: pageworks <command> [options]
+
+CLI verbs (mutate docs/):
+  init [--minimal] [--name <slug>]    Scaffold docs/ + docs.yaml + index.md + default sections
+                                      --minimal: docs.yaml + index.md only
+  export <renderer> [opts]            Generate renderer config from docs.yaml
+                                      Renderers: mkdocs | docusaurus
+                                      Options:
+                                        --out <path>   Override default output location
+                                        --force        Overwrite existing files
+                                        --no-workflow  Skip GitHub Pages workflow
+  doctor [--fix]                      Validate docs/ — schema, frontmatter, links
+                                      --fix applies mechanical repairs
+
+Skill verbs (run via /pageworks in your AI agent):
+  new <page>                          Scaffold a page (asks for type + section)
+  new --section <name>                Declare a new section in docs.yaml
+  review                              Quality gate — type fit, prose, structure
+  status                              Briefing of docs/ state
+  audit                               Drift detection — stale, broken links, sync
+
+Top-level:
+  -v, --version          Print version and exit
+  -h, --help             Show this help
+
+Docs: https://github.com/alexsmedile/pageworks
+EOF
+}
+
+# ── docs init ────────────────────────────────────────────────────────────────
+cmd_init() {
+  local minimal=false
+  local project_name=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --minimal) minimal=true; shift ;;
+      --name)    require_value "--name" "${2:-}"; project_name="$2"; shift 2 ;;
+      --name=*)  project_name="${1#--name=}"; shift ;;
+      -h|--help) top_usage; exit 0 ;;
+      *) die "Unknown init option: '$1'" ;;
+    esac
+  done
+
+  [[ -z "$project_name" ]] && project_name="$(slug_from_dir)"
+
+  echo "pageworks init"
+  echo ""
+
+  if [[ ! -d "docs" ]]; then
+    mkdir -p docs
+    created "docs/"
+  else
+    skip "docs/ (already exists)"
+  fi
+
+  write_if_missing "docs/docs.yaml" "site:
+  name: ${project_name}
+  tagline: \"\"
+  # base_url: https://example.com   # optional — used by renderer adapters
+
+sections:
+  - id: getting-started
+    title: Getting Started
+    order: 1
+    pages: [install, quickstart, concepts]
+
+  - id: guides
+    title: Guides
+    order: 2
+    pages: []
+
+  - id: reference
+    title: Reference
+    order: 3
+    pages: []
+
+# Optional top-level entries with no section grouping
+# extras:
+#   - changelog       # symlinks to ../CHANGELOG.md
+#   - troubleshooting
+
+# Optional per-renderer hints, consumed by 'pageworks export <renderer>'.
+# Each adapter falls back to its built-in defaults if a key is absent.
+# Full schema: pageworks references/renderers.md
+# renderers:
+#   mkdocs:
+#     theme: material
+#     primary: indigo
+#     repo_url: https://github.com/org/${project_name}
+#     edit_uri: edit/main/docs/
+#   docusaurus:
+#     preset: classic
+#     organizationName: org
+#     projectName: ${project_name}
+"
+
+  write_if_missing "docs/index.md" "---
+title: ${project_name}
+description: User-facing documentation for ${project_name}.
+section: \"\"
+type: explanation
+order: 0
+status: draft
+updated: ${TODAY}
+---
+
+# ${project_name}
+
+Welcome to the documentation. Start here, then drill into the sections below.
+
+## Sections
+
+- **Getting Started** — install + quickstart + core concepts
+- **Guides** — task-oriented walkthroughs
+- **Reference** — CLI, configuration, schema details
+"
+
+  if $minimal; then
+    echo ""
+    echo "docs/ initialized (minimal — no default sections)."
+    return 0
+  fi
+
+  for entry in "getting-started:install:Install:Get up and running in two minutes.:tutorial" \
+               "getting-started:quickstart:Quickstart:A guided walk through the basics.:tutorial" \
+               "getting-started:concepts:Concepts:Core ideas you need to know.:explanation"; do
+    local section page title desc type
+    IFS=':' read -r section page title desc type <<< "$entry"
+    [[ -d "docs/$section" ]] || { mkdir -p "docs/$section"; created "docs/$section/"; }
+    write_if_missing "docs/${section}/${page}.md" "---
+title: ${title}
+description: ${desc}
+section: ${section}
+type: ${type}
+status: draft
+updated: ${TODAY}
+---
+
+# ${title}
+
+<First paragraph — what this page is for. One sentence is fine.>
+
+## <First subhead>
+
+<Content.>
+"
+  done
+
+  for d in guides reference; do
+    if [[ ! -d "docs/$d" ]]; then
+      mkdir -p "docs/$d"
+      touch "docs/$d/.gitkeep"
+      created "docs/$d/"
+    fi
+  done
+
+  echo ""
+  echo "docs/ initialized."
+  echo ""
+  echo "Next:"
+  echo "  pageworks new <page>          # add a page (asks for type + section)"
+  echo "  pageworks new --section <id>  # add a new section"
+  echo "  pageworks review              # run quality gate (in your AI agent)"
+  echo "  pageworks export mkdocs       # generate mkdocs.yml + GitHub Pages workflow"
+}
+
+# ── docs.yaml parsers (lifted from spectacular v1.1.0) ──────────────────────
+docs_yaml_scalar() {
+  local manifest="$1" path="$2"
+  local root="${path%%.*}" key="${path#*.}"
+  awk -v root="$root" -v key="$key" '
+    $0 ~ "^"root":" { in_block=1; next }
+    in_block && /^[a-zA-Z]/ && !/^  / { in_block=0 }
+    in_block && $0 ~ "^[[:space:]]+"key":" {
+      sub(/^[[:space:]]+[a-zA-Z_]+:[[:space:]]*/, "")
+      sub(/[[:space:]]*#.*$/, "")
+      sub(/^["'\'']/, ""); sub(/["'\'']$/, "")
+      print
+      exit
+    }
+  ' "$manifest"
+}
+
+docs_yaml_renderer_scalar() {
+  local manifest="$1" renderer="$2" key="$3"
+  awk -v renderer="$renderer" -v key="$key" '
+    /^renderers:/ { in_renderers=1; next }
+    in_renderers && /^[a-zA-Z]/ && !/^  / { in_renderers=0 }
+    in_renderers && $0 ~ "^  "renderer":" { in_block=1; next }
+    in_block && /^  [a-zA-Z]/ { in_block=0 }
+    in_block && $0 ~ "^    "key":" {
+      sub(/^[[:space:]]+[a-zA-Z_]+:[[:space:]]*/, "")
+      sub(/[[:space:]]*#.*$/, "")
+      sub(/^["'\'']/, ""); sub(/["'\'']$/, "")
+      print
+      exit
+    }
+  ' "$manifest"
+}
+
+docs_yaml_sections() {
+  local manifest="$1"
+  awk '
+    /^sections:/ { in_sec=1; next }
+    in_sec && /^[a-zA-Z]/ && !/^  / { in_sec=0 }
+    in_sec && /^  - id:/ {
+      if (id != "") print id "\t" title "\t" order "\t" pages
+      id=""; title=""; order="999"; pages=""
+      id=$0; sub(/^  - id:[[:space:]]*/, "", id); sub(/[[:space:]]*#.*$/, "", id); sub(/[[:space:]]*$/, "", id)
+    }
+    in_sec && /^[[:space:]]+title:/ {
+      title=$0; sub(/^[[:space:]]+title:[[:space:]]*/, "", title); sub(/[[:space:]]*#.*$/, "", title)
+      sub(/^["'\'']/, "", title); sub(/["'\'']$/, "", title)
+    }
+    in_sec && /^[[:space:]]+order:/ {
+      order=$0; sub(/^[[:space:]]+order:[[:space:]]*/, "", order); sub(/[[:space:]]*#.*$/, "", order)
+    }
+    in_sec && /^[[:space:]]+pages:[[:space:]]*\[/ {
+      p=$0
+      if (match(p, /\[[^\]]*\]/) > 0) { p=substr(p, RSTART+1, RLENGTH-2) } else { p="" }
+      gsub(/[[:space:]]/, "", p)
+      pages=p
+    }
+    END {
+      if (id != "") print id "\t" title "\t" order "\t" pages
+    }
+  ' "$manifest" | sort -t$'\t' -k3,3n
+}
+
+docs_yaml_extras() {
+  local manifest="$1"
+  awk '
+    /^extras:/ { in_ex=1; next }
+    in_ex && /^[a-zA-Z]/ && !/^  / && !/^[[:space:]]*-/ { in_ex=0 }
+    in_ex && /^[[:space:]]*-[[:space:]]+/ {
+      slug=$0; sub(/^[[:space:]]*-[[:space:]]+/, "", slug); sub(/[[:space:]]*#.*$/, "", slug); sub(/[[:space:]]*$/, "", slug)
+      gsub(/^["'\'']|["'\'']$/, "", slug)
+      if (slug != "") print slug
+    }
+  ' "$manifest"
+}
+
+docs_page_title() {
+  local file="$1" fallback_slug="$2"
+  if [[ -f "$file" ]]; then
+    local fm_title
+    fm_title=$(awk '/^---$/ { c++; if (c==2) exit; next } c==1 && /^title:/ { sub(/^title:[[:space:]]*/, ""); sub(/[[:space:]]*$/, ""); gsub(/^["'\'']|["'\'']$/, ""); print; exit }' "$file")
+    if [[ -n "$fm_title" ]]; then
+      printf '%s' "$fm_title"
+      return
+    fi
+    local h1
+    h1=$(grep -m1 '^# ' "$file" | sed 's/^# *//')
+    if [[ -n "$h1" ]]; then
+      printf '%s' "$h1"
+      return
+    fi
+  fi
+  printf '%s' "$fallback_slug" | awk '{
+    n=split($0, parts, "-")
+    for (i=1; i<=n; i++) { parts[i]=toupper(substr(parts[i],1,1)) tolower(substr(parts[i],2)) }
+    out=parts[1]; for (i=2; i<=n; i++) out=out " " parts[i]; print out
+  }'
+}
+
+docs_is_pinned() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+  head -1 "$file" 2>/dev/null | grep -qE '^(//|#)[[:space:]]*pageworks:[[:space:]]*do-not-overwrite'
+}
+
+docs_write_adapter_file() {
+  local path="$1" content="$2"
+  if docs_is_pinned "$path"; then
+    echo "  ⊘  ${path}  (pinned — manual)"
+    DOCS_EXPORT_PINNED=$((DOCS_EXPORT_PINNED + 1))
+    return 0
+  fi
+  if [[ -e "$path" ]] && ! $DOCS_EXPORT_FORCE; then
+    echo "  ⊘  ${path}  (skipped — use --force)"
+    DOCS_EXPORT_SKIPPED=$((DOCS_EXPORT_SKIPPED + 1))
+    return 0
+  fi
+  local existed=false
+  [[ -e "$path" ]] && existed=true
+  mkdir -p "$(dirname "$path")"
+  printf '%s' "$content" > "$path"
+  if $existed && $DOCS_EXPORT_FORCE; then
+    echo "  ✓  ${path}  (overwritten)"
+  else
+    echo "  ✓  ${path}"
+  fi
+  DOCS_EXPORT_WROTE=$((DOCS_EXPORT_WROTE + 1))
+}
+
+# ── adapter: mkdocs ──
+docs_export_mkdocs() {
+  local manifest="$1" out_dir="$2"
+  local site_name site_tagline site_url
+  site_name="$(docs_yaml_scalar "$manifest" "site.name")"
+  site_tagline="$(docs_yaml_scalar "$manifest" "site.tagline")"
+  site_url="$(docs_yaml_scalar "$manifest" "site.base_url")"
+
+  local theme palette_primary palette_scheme repo_url edit_uri
+  theme="$(docs_yaml_renderer_scalar "$manifest" "mkdocs" "theme")"
+  [[ -z "$theme" ]] && theme="material"
+  palette_primary="$(docs_yaml_renderer_scalar "$manifest" "mkdocs" "primary")"
+  palette_scheme="$(docs_yaml_renderer_scalar "$manifest" "mkdocs" "scheme")"
+  repo_url="$(docs_yaml_renderer_scalar "$manifest" "mkdocs" "repo_url")"
+  edit_uri="$(docs_yaml_renderer_scalar "$manifest" "mkdocs" "edit_uri")"
+
+  local nav_lines=""
+  if [[ -f "docs/index.md" ]]; then
+    nav_lines+="  - Home: index.md
+"
+  fi
+
+  while IFS=$'\t' read -r sec_id sec_title sec_order sec_pages; do
+    [[ -z "$sec_id" ]] && continue
+    [[ -z "$sec_pages" ]] && continue
+    nav_lines+="  - ${sec_title}:
+"
+    IFS=',' read -r -a page_arr <<< "$sec_pages"
+    for page in "${page_arr[@]}"; do
+      [[ -z "$page" ]] && continue
+      local page_file="docs/${sec_id}/${page}.md"
+      local page_title
+      page_title="$(docs_page_title "$page_file" "$page")"
+      nav_lines+="      - ${page_title}: ${sec_id}/${page}.md
+"
+    done
+  done < <(docs_yaml_sections "$manifest")
+
+  while IFS= read -r extra; do
+    [[ -z "$extra" ]] && continue
+    local extra_file="docs/${extra}.md"
+    local extra_title
+    extra_title="$(docs_page_title "$extra_file" "$extra")"
+    nav_lines+="  - ${extra_title}: ${extra}.md
+"
+  done < <(docs_yaml_extras "$manifest")
+
+  local out_file="${out_dir%/}/mkdocs.yml"
+  local content="# Generated by pageworks export mkdocs — edits will be preserved unless --force.
+# To pin manual edits, add as the first line: # pageworks: do-not-overwrite
+site_name: ${site_name:-Documentation}
+"
+  [[ -n "$site_tagline" ]] && content+="site_description: ${site_tagline}
+"
+  [[ -n "$site_url" ]] && content+="site_url: ${site_url}
+"
+  [[ -n "$repo_url" ]] && content+="repo_url: ${repo_url}
+"
+  [[ -n "$edit_uri" ]] && content+="edit_uri: ${edit_uri}
+"
+  content+="docs_dir: docs
+
+theme:
+  name: ${theme}
+"
+  if [[ -n "$palette_scheme" || -n "$palette_primary" ]]; then
+    content+="  palette:
+"
+    [[ -n "$palette_scheme" ]] && content+="    - scheme: ${palette_scheme}
+"
+    [[ -n "$palette_primary" ]] && content+="      primary: ${palette_primary}
+"
+  fi
+  content+="
+plugins:
+  - search
+
+nav:
+${nav_lines}"
+
+  docs_write_adapter_file "$out_file" "$content"
+}
+
+# ── adapter: docusaurus ──
+docs_export_docusaurus() {
+  local manifest="$1" out_dir="$2"
+  local site_name site_tagline site_url
+  site_name="$(docs_yaml_scalar "$manifest" "site.name")"
+  site_tagline="$(docs_yaml_scalar "$manifest" "site.tagline")"
+  site_url="$(docs_yaml_scalar "$manifest" "site.base_url")"
+
+  local org_name proj_name preset
+  org_name="$(docs_yaml_renderer_scalar "$manifest" "docusaurus" "organizationName")"
+  proj_name="$(docs_yaml_renderer_scalar "$manifest" "docusaurus" "projectName")"
+  preset="$(docs_yaml_renderer_scalar "$manifest" "docusaurus" "preset")"
+  [[ -z "$preset" ]] && preset="classic"
+
+  local du_url="https://example.com" du_base="/"
+  if [[ -n "$site_url" ]]; then
+    du_url="$(printf '%s' "$site_url" | awk -F/ '{print $1"//"$3}')"
+    du_base="$(printf '%s' "$site_url" | sed -E "s#^https?://[^/]+##")"
+    [[ -z "$du_base" ]] && du_base="/"
+    [[ "${du_base: -1}" != "/" ]] && du_base+="/"
+  fi
+
+  local sidebar_items=""
+  if [[ -f "docs/index.md" ]]; then
+    sidebar_items+="    'index',
+"
+  fi
+
+  while IFS=$'\t' read -r sec_id sec_title sec_order sec_pages; do
+    [[ -z "$sec_id" ]] && continue
+    [[ -z "$sec_pages" ]] && continue
+    sidebar_items+="    {
+      type: 'category',
+      label: '${sec_title//\'/\\\'}',
+      items: ["
+    IFS=',' read -r -a page_arr <<< "$sec_pages"
+    local first=true
+    for page in "${page_arr[@]}"; do
+      [[ -z "$page" ]] && continue
+      if $first; then first=false; else sidebar_items+=", "; fi
+      sidebar_items+="'${sec_id}/${page}'"
+    done
+    sidebar_items+="],
+    },
+"
+  done < <(docs_yaml_sections "$manifest")
+
+  while IFS= read -r extra; do
+    [[ -z "$extra" ]] && continue
+    sidebar_items+="    '${extra}',
+"
+  done < <(docs_yaml_extras "$manifest")
+
+  local config_file="${out_dir%/}/docusaurus.config.js"
+  local config_content="// Generated by pageworks export docusaurus — edits will be preserved unless --force.
+// To pin manual edits, add as the first line: // pageworks: do-not-overwrite
+module.exports = {
+  title: '${site_name//\'/\\\'}',
+  tagline: '${site_tagline//\'/\\\'}',
+  url: '${du_url}',
+  baseUrl: '${du_base}',
+"
+  [[ -n "$org_name" ]] && config_content+="  organizationName: '${org_name}',
+"
+  [[ -n "$proj_name" ]] && config_content+="  projectName: '${proj_name}',
+"
+  config_content+="  presets: [
+    ['${preset}', {
+      docs: {
+        sidebarPath: require.resolve('./sidebars.js'),
+      },
+    }],
+  ],
+  themeConfig: {
+    navbar: {
+      title: '${site_name//\'/\\\'}',
+    },
+  },
+};
+"
+  docs_write_adapter_file "$config_file" "$config_content"
+
+  local sidebars_file="${out_dir%/}/sidebars.js"
+  local sidebars_content="// Generated by pageworks export docusaurus — edits will be preserved unless --force.
+// To pin manual edits, add as the first line: // pageworks: do-not-overwrite
+module.exports = {
+  docs: [
+${sidebar_items}  ],
+};
+"
+  docs_write_adapter_file "$sidebars_file" "$sidebars_content"
+}
+
+# ── GitHub Pages workflow writer ──
+docs_export_workflow() {
+  local renderer="$1" out_dir="$2"
+  local wf_file="${out_dir%/}/.github/workflows/docs.yml"
+
+  local wf_content
+  if [[ "$renderer" == "mkdocs" ]]; then
+    wf_content="# Generated by pageworks export mkdocs
+name: Deploy docs (MkDocs)
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'mkdocs.yml', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install mkdocs mkdocs-material
+      - run: mkdocs build --strict --site-dir _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+"
+  else
+    wf_content="# Generated by pageworks export docusaurus
+name: Deploy docs (Docusaurus)
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'docusaurus.config.js', 'sidebars.js', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx docusaurus build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+"
+  fi
+  docs_write_adapter_file "$wf_file" "$wf_content"
+}
+
+# ── docs export orchestrator ──
+cmd_export() {
+  local renderer=""
+  local out_dir="."
+  DOCS_EXPORT_FORCE=false
+  local no_workflow=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help) top_usage; exit 0 ;;
+      --out)
+        require_value "--out" "${2:-}"
+        out_dir="$2"; shift 2 ;;
+      --out=*)
+        out_dir="${1#--out=}"; shift ;;
+      --force)       DOCS_EXPORT_FORCE=true; shift ;;
+      --no-workflow) no_workflow=true; shift ;;
+      mkdocs|docusaurus)
+        [[ -n "$renderer" ]] && die "Multiple renderers given: '$renderer' and '$1'. Run one at a time."
+        renderer="$1"; shift ;;
+      mintlify|fumadocs)
+        die "Renderer '$1' is not shipped — community contributions welcome. See references/renderers.md § Contributing a renderer."
+        ;;
+      -*) die "Unknown export option: '$1'" ;;
+      *)  die "Unknown renderer: '$1'. Supported: mkdocs, docusaurus." ;;
+    esac
+  done
+
+  [[ -z "$renderer" ]] && die "export requires a renderer. Usage: pageworks export <mkdocs|docusaurus> [--out path] [--force]"
+
+  local manifest="docs/docs.yaml"
+  [[ -f "$manifest" ]] || die "docs/docs.yaml not found. Run 'pageworks init' first."
+
+  DOCS_EXPORT_WROTE=0
+  DOCS_EXPORT_SKIPPED=0
+  DOCS_EXPORT_PINNED=0
+
+  echo "pageworks export → ${renderer}"
+  echo ""
+  echo "Generated:"
+
+  case "$renderer" in
+    mkdocs)     docs_export_mkdocs     "$manifest" "$out_dir" ;;
+    docusaurus) docs_export_docusaurus "$manifest" "$out_dir" ;;
+  esac
+
+  if ! $no_workflow; then
+    docs_export_workflow "$renderer" "$out_dir"
+  fi
+
+  echo ""
+  echo "Summary: ${DOCS_EXPORT_WROTE} written, ${DOCS_EXPORT_SKIPPED} skipped, ${DOCS_EXPORT_PINNED} pinned"
+  echo ""
+
+  if (( DOCS_EXPORT_WROTE > 0 )); then
+    echo "Next steps:"
+    if [[ "$renderer" == "mkdocs" ]]; then
+      echo "  1. pip install mkdocs mkdocs-material"
+      echo "  2. mkdocs serve                      # local preview at http://127.0.0.1:8000"
+    else
+      echo "  1. npm init -y && npm install @docusaurus/core @docusaurus/preset-classic react react-dom"
+      echo "  2. npx docusaurus start              # local preview at http://localhost:3000"
+    fi
+    if ! $no_workflow; then
+      echo "  3. Settings → Pages → Source = GitHub Actions"
+      echo "  4. Commit + push to main — the workflow deploys automatically"
+    fi
+  elif (( DOCS_EXPORT_SKIPPED > 0 || DOCS_EXPORT_PINNED > 0 )); then
+    echo "All targets up to date. Use --force to overwrite non-pinned files."
+  fi
+}
+
+# ── doctor ──────────────────────────────────────────────────────────────────
+DOCTOR_ERRORS=0
+DOCTOR_WARNINGS=0
+DOCTOR_INFO=0
+DOCTOR_FIX=false
+
+doctor_emit() {
+  local sev="$1" path="$2" msg="$3" fix="${4:-}"
+  case "$sev" in
+    pass)    echo "  ✅ ${path} — ${msg}" ;;
+    info)    echo "  ℹ  ${path} — ${msg}"; DOCTOR_INFO=$((DOCTOR_INFO + 1)) ;;
+    warning) echo "  ⚠️  ${path} — ${msg}"; [[ -n "$fix" ]] && echo "     → ${fix}"; DOCTOR_WARNINGS=$((DOCTOR_WARNINGS + 1)) ;;
+    error)   echo "  ❌ ${path} — ${msg}"; [[ -n "$fix" ]] && echo "     → ${fix}"; DOCTOR_ERRORS=$((DOCTOR_ERRORS + 1)) ;;
+  esac
+}
+
+cmd_doctor() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --fix) DOCTOR_FIX=true; shift ;;
+      -h|--help) top_usage; exit 0 ;;
+      *) die "Unknown doctor option: '$1'" ;;
+    esac
+  done
+
+  echo "pageworks doctor"
+  echo ""
+
+  local docs_dir="docs"
+  local manifest="${docs_dir}/docs.yaml"
+
+  if [[ ! -d "$docs_dir" ]]; then
+    doctor_emit "info" "docs/" "no docs/ folder — run 'pageworks init' to scaffold one"
+    echo ""
+    echo "${DOCTOR_ERRORS} error(s), ${DOCTOR_WARNINGS} warning(s), ${DOCTOR_INFO} info"
+    exit 0
+  fi
+
+  if [[ ! -f "$manifest" ]]; then
+    doctor_emit "error" "$manifest" "docs.yaml missing but docs/ exists" "run 'pageworks init' to scaffold it"
+    echo ""
+    echo "${DOCTOR_ERRORS} error(s), ${DOCTOR_WARNINGS} warning(s), ${DOCTOR_INFO} info"
+    exit 1
+  fi
+
+  doctor_emit "pass" "$manifest" "docs.yaml present"
+
+  # Validate optional renderers: block
+  if grep -qE '^renderers:' "$manifest"; then
+    if grep -qE '^renderers:[[:space:]]+[^[:space:]#]' "$manifest"; then
+      doctor_emit "error" "$manifest" "renderers: must be a map, got a scalar value" \
+        "convert to a map: 'renderers:\\n  mkdocs:\\n    theme: material'"
+    elif awk '
+      /^renderers:/ { found=1; next }
+      found && /^[a-zA-Z]/ && !/^[[:space:]]/ { exit }
+      found && /^[[:space:]]*$/ { next }
+      found && /^[[:space:]]*-[[:space:]]/ { print "list"; exit }
+      found && /^[[:space:]]+[a-zA-Z]/ { exit }
+    ' "$manifest" | grep -q list; then
+      doctor_emit "error" "$manifest" "renderers: must be a map, got a list" \
+        "convert list items to map keys: 'renderers:\\n  mkdocs: ...'"
+    else
+      doctor_emit "pass" "$manifest" "renderers: block present (valid map)"
+      local known_renderers="mkdocs docusaurus"
+      local renderer_keys
+      renderer_keys=$(awk '
+        /^renderers:/ { in_block=1; next }
+        in_block && /^[a-zA-Z]/ && !/^  / { in_block=0 }
+        in_block && /^  [a-zA-Z_][a-zA-Z0-9_-]*:/ {
+          key=$0
+          sub(/^[[:space:]]+/, "", key)
+          sub(/:.*$/, "", key)
+          print key
+        }
+      ' "$manifest")
+      while IFS= read -r rkey; do
+        [[ -z "$rkey" ]] && continue
+        if in_list "$rkey" "$known_renderers"; then
+          doctor_emit "pass" "$manifest" "renderers.${rkey} recognized"
+        else
+          doctor_emit "warning" "$manifest" "renderers.${rkey} is not a recognized renderer name" \
+            "remove the block, fix the typo, or document it in references/renderers.md (community adapter)"
+        fi
+      done <<< "$renderer_keys"
+    fi
+  fi
+
+  # Section/page declaration checks
+  local declared_pages
+  declared_pages=$(awk '
+    /^sections:/ { in_sec=1; next }
+    in_sec && /^[a-zA-Z]/ && !/^  / { in_sec=0 }
+    in_sec && /^  - id:/ {
+      section=$0
+      sub(/^  - id:[[:space:]]*/, "", section)
+      sub(/[[:space:]]*#.*$/, "", section)
+      sub(/[[:space:]]*$/, "", section)
+    }
+    in_sec && /^[[:space:]]*pages:[[:space:]]*\[/ {
+      pages=$0
+      if (match(pages, /\[[^\]]*\]/) > 0) {
+        pages=substr(pages, RSTART+1, RLENGTH-2)
+      } else {
+        pages=""
+      }
+      gsub(/[[:space:]]/, "", pages)
+      n=split(pages, arr, ",")
+      for (i=1; i<=n; i++) if (arr[i] != "") print section "/" arr[i]
+    }
+  ' "$manifest")
+
+  local declared_extras
+  declared_extras=$(awk '
+    /^extras:/ { in_ex=1; next }
+    in_ex && /^[a-zA-Z]/ && !/^  / && !/^[[:space:]]*-/ { in_ex=0 }
+    in_ex && /^[[:space:]]*-[[:space:]]+/ {
+      slug=$0; sub(/^[[:space:]]*-[[:space:]]+/, "", slug); sub(/[[:space:]]*$/, "", slug)
+      gsub(/^["'\'']|["'\'']$/, "", slug)
+      if (slug != "") print slug
+    }
+  ' "$manifest")
+
+  local page section_id file_path
+  while IFS= read -r entry; do
+    [[ -z "$entry" ]] && continue
+    section_id="${entry%/*}"
+    page="${entry##*/}"
+    file_path="${docs_dir}/${section_id}/${page}.md"
+    if [[ -f "$file_path" ]]; then
+      doctor_emit "pass" "$file_path" "declared page present"
+    else
+      doctor_emit "error" "$file_path" "page '${page}' declared in docs.yaml but file missing" \
+        "create the file or remove the entry from docs.yaml"
+    fi
+  done <<< "$declared_pages"
+
+  local extra_slug extra_path
+  while IFS= read -r extra_slug; do
+    [[ -z "$extra_slug" ]] && continue
+    extra_path="${docs_dir}/${extra_slug}.md"
+    if [[ -f "$extra_path" ]]; then
+      doctor_emit "pass" "$extra_path" "declared extra present"
+    else
+      doctor_emit "error" "$extra_path" "extra '${extra_slug}' declared in docs.yaml but file missing" \
+        "create the file or remove the entry from docs.yaml extras:"
+    fi
+  done <<< "$declared_extras"
+
+  # Orphan check
+  shopt -s nullglob
+  for section_dir in "$docs_dir"/*/; do
+    local sec_id="${section_dir%/}"
+    sec_id="${sec_id##*/}"
+    [[ "$sec_id" == "."* ]] && continue
+    for page_file in "$section_dir"*.md; do
+      local page_slug
+      page_slug=$(basename "$page_file" .md)
+      if ! echo "$declared_pages" | grep -qxF "${sec_id}/${page_slug}"; then
+        doctor_emit "warning" "$page_file" "page exists on disk but not declared in docs.yaml (orphan)" \
+          "add to docs.yaml ${sec_id}.pages or delete the file"
+      fi
+    done
+  done
+  for page_file in "$docs_dir"/*.md; do
+    [[ -f "$page_file" ]] || continue
+    local page_slug
+    page_slug=$(basename "$page_file" .md)
+    [[ "$page_slug" == "index" ]] && continue
+    if ! echo "$declared_extras" | grep -qxF "$page_slug"; then
+      doctor_emit "warning" "$page_file" "top-level page exists on disk but not in docs.yaml extras: (orphan)" \
+        "add to docs.yaml extras: or move into a section folder"
+    fi
+  done
+  shopt -u nullglob
+
+  # Frontmatter validation
+  local required_fields="title description section status updated"
+  shopt -s nullglob
+  for page_file in "$docs_dir"/*.md "$docs_dir"/*/*.md; do
+    [[ -f "$page_file" ]] || continue
+    if ! head -1 "$page_file" | grep -q '^---$'; then
+      doctor_emit "error" "$page_file" "missing frontmatter delimiter" \
+        "add proper frontmatter block"
+      continue
+    fi
+    local fm
+    fm=$(awk '/^---$/ { count++; if (count == 2) exit; next } count == 1' "$page_file")
+    for field in $required_fields; do
+      if ! echo "$fm" | grep -qE "^${field}:"; then
+        doctor_emit "error" "$page_file" "missing required frontmatter field: ${field}" \
+          "add '${field}:' to frontmatter (or run 'pageworks doctor --fix')"
+      fi
+    done
+    # Info-level: type field is recommended
+    if ! echo "$fm" | grep -qE "^type:"; then
+      doctor_emit "info" "$page_file" "missing 'type:' frontmatter (Diátaxis: tutorial|how-to|reference|explanation)"
+    fi
+  done
+  shopt -u nullglob
+
+  echo ""
+  echo "${DOCTOR_ERRORS} error(s), ${DOCTOR_WARNINGS} warning(s), ${DOCTOR_INFO} info"
+  exit $(( DOCTOR_ERRORS > 0 ? 1 : 0 ))
+}
+
+# ── skill-verb stubs ──────────────────────────────────────────────────────────
+skill_verb_message() {
+  local verb="$1" description="$2"
+  cat >&2 <<EOF
+'pageworks ${verb}' is a skill verb — run it inside your AI agent (Claude Code, Codex).
+${description}
+EOF
+  exit 0
+}
+
+# ── main ──────────────────────────────────────────────────────────────────────
+main() {
+  local subcmd="${1:-}"
+
+  case "$subcmd" in
+    --version|-v|version)
+      echo "pageworks ${PAGEWORKS_VERSION}"
+      exit 0
+      ;;
+    ""|--help|-h|help)
+      top_usage; exit 0
+      ;;
+    init)   shift; cmd_init   "$@" ;;
+    export) shift; cmd_export "$@" ;;
+    doctor) shift; cmd_doctor "$@" ;;
+    new)
+      shift
+      skill_verb_message "new" "Scaffolds a page (asks for Diátaxis type + section + title)."
+      ;;
+    review)
+      shift
+      skill_verb_message "review" "Quality gate — type fit, prose, structure, freshness."
+      ;;
+    status)
+      shift
+      skill_verb_message "status" "Briefing of docs/ state — sections, page types, drafts, stale pages."
+      ;;
+    audit)
+      shift
+      skill_verb_message "audit" "Drift detection — stale pages, broken links, sync-source gaps."
+      ;;
+    *)
+      die "Unknown command: '${subcmd}'.
+CLI verbs:   init | export | doctor
+Skill verbs (run via /pageworks in your AI agent): new | review | status | audit
+Run 'pageworks --help' for usage."
+      ;;
+  esac
+}
+
+main "$@"

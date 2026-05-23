@@ -1,0 +1,22 @@
+{
+  "name": "pageworks",
+  "version": "0.1.0",
+  "description": "Public-facing documentation skill — owns docs/ scaffold, schema, authoring, renderer export (MkDocs + Docusaurus), and maintenance.",
+  "author": {
+    "name": "Alessandro Smedile"
+  },
+  "homepage": "https://github.com/alexsmedile/pageworks",
+  "repository": "https://github.com/alexsmedile/pageworks",
+  "license": "MIT",
+  "keywords": [
+    "pageworks",
+    "documentation",
+    "docs",
+    "mkdocs",
+    "docusaurus",
+    "diataxis",
+    "authoring",
+    "claude-code",
+    "skills"
+  ]
+}

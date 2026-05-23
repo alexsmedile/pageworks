@@ -1,0 +1,20 @@
+# Per ~/.claude/CLAUDE.md global preferences
+_archive/
+_archived/
+_backup/
+_backups/
+
+# Spectacular local-scope workspace (gitignored by convention)
+.spectacular.local/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor swap
+*.swp
+*.swo
+*~
+
+# Test scratch (mktemp-style)
+/tmp/pageworks-*-test-*
