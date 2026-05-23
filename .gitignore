@@ -7,6 +7,11 @@ _backups/
 # Spectacular local-scope workspace (gitignored by convention)
 .spectacular.local/
 
+# Bootstrapped spectacular skill (dev-time methodology, not pageworks code)
+# Track skills.lock so the version is reproducible; install via `spectacular init --update`
+.agents/skills/spectacular/
+.claude/skills/spectacular
+
 # OS junk
 .DS_Store
 Thumbs.db

@@ -46,6 +46,30 @@ Pageworks's drift check compares the page's `updated:` field to the source spec'
 
 **`pageworks sync-ack <page>`** (planned v0.2): bump `updated:` on a page without content change, declaring "I checked; the spec's change doesn't require a doc update." This silences false positives.
 
+### Common spec sources
+
+`synced_from:` accepts any file path. In most projects, the source-of-truth lives in a predictable place. Pageworks recognizes (but does not require) these conventions:
+
+| Source | Convention | Typical use |
+|---|---|---|
+| `.spectacular/specs/<x>/SPEC.md` | spectacular workspace | Per-capability specs in projects that use spectacular |
+| `.spectacular/SPEC.md` | spectacular workspace | Top-level system spec index |
+| `.spectacular/PRD.md` | spectacular workspace | Product intent — useful for onboarding docs |
+| `.spectacular/ARCHITECTURE.md` | spectacular workspace | Architecture overview — useful for explanation pages |
+| `.spectacular/DECISIONS.md` | spectacular workspace | ADR log — useful for "why" pages |
+| `.openspec/specs/<x>.md` | OpenSpec / open-source spec | Common in OSS projects |
+| `.specs/<x>.md` | minimal convention | Generic spec folder when no spec framework is used |
+| `SPECS.md` (repo root) | flat convention | Single-file spec for small projects |
+| `ARCHITECTURE.md` (repo root) | flat convention | Architecture decisions in small projects |
+| `README.md` (repo root) | universal | Sometimes the only source — link via `synced_from:` for changelog-driven docs |
+| `docs/specs/<x>.md` | inline-specs | Some projects keep specs in their docs/ tree itself |
+
+When pageworks audits drift, it walks all pages with `synced_from:` regardless of the source path — these conventions just help users decide where to point.
+
+**When no spec source exists**, omit `synced_from:` from frontmatter. Drift detection then falls back to the file-mtime check only (page `updated:` vs file mtime).
+
+**Combining sources**: a page may legitimately need to track multiple specs. v0.1.0 supports a single `synced_from:` value; multi-source tracking is on the roadmap (`synced_from: [a, b, c]` array form).
+
 ## When pageworks pairs with spectacular
 
 Spectacular's `archive` verb (when archiving a request that touched `SPEC.md` or `specs/`) prompts the user to invoke pageworks. The typical flow:
