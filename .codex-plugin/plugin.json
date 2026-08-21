@@ -1,19 +1,19 @@
 {
   "name": "pageworks",
-  "version": "0.1.0",
-  "description": "Public-facing documentation skill — owns docs/ scaffold, schema, authoring, renderer export, and maintenance.",
+  "version": "0.2.0",
+  "description": "Public-facing software & platform documentation skill — owns the docs/ surface end-to-end: Dual-Dimension Architecture (6 Page Classes & 6 Topic Categories), scaffold, schema, page authoring, renderer export (MkDocs Material, Docusaurus v3+, Docker), and 180-day stale-page drift maintenance.",
   "skills": "./skills/",
   "interface": {
     "displayName": "pageworks",
-    "shortDescription": "Write docs that don't rot.",
-    "longDescription": "Pageworks owns everything inside a project's docs/ folder: scaffold, schema, page authoring with Diátaxis templates, renderer export to MkDocs Material and Docusaurus, drift detection, and maintenance as specs change. Standalone-capable on any project; pairs cleanly with spectacular for internal/external doc separation.",
+    "shortDescription": "Write docs that don't rot — Dual-Dimension Software Wiki.",
+    "longDescription": "Pageworks owns everything inside a project's docs/ folder: scaffold, schema, page authoring with 6 Core Page Classes across 6 Main Topic Categories, renderer export to MkDocs Material and Docusaurus v3+, 180-day stale-page drift detection, and spec sync maintenance. Standalone-capable on any project; pairs cleanly with Spectacular for internal/external doc separation.",
     "developerName": "Alessandro Smedile",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://github.com/alexsmedile/pageworks",
     "defaultPrompt": [
       "/pageworks",
-      "pageworks init",
+      "pageworks init --preset platform",
       "pageworks new <page>",
       "pageworks export mkdocs",
       "pageworks doctor"

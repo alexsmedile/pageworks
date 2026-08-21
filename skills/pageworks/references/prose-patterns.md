@@ -1,8 +1,8 @@
 # Prose Patterns & Writing Standards
 
-The shared writing, formatting, and design standards across all documentation pages: voice, tone, structure, action-oriented headings, copy-paste fidelity, and diagrams.
+Use this when: Authoring documentation prose, formatting copy-paste ready code blocks, writing action-oriented headings, or creating Mermaid diagrams.
 
-Loaded by `pageworks new <page>` and `pageworks review`.
+The shared writing, formatting, and design standards across all documentation pages: voice, tone, structure, action-oriented headings, copy-paste fidelity, and diagrams.
 
 ---
 

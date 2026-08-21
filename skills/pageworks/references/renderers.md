@@ -1,6 +1,6 @@
 # Renderers & Wiki Platforms — Architecture, SSGs, and Self-Hosted Wikis
 
-Loaded when handling `pageworks export <renderer>`, configuring renderer pipelines in `docs.yaml`, or deciding between **Docs-as-Code** (SSGs) vs. **Collaborative Wiki Platforms**.
+Use this when: Exporting to MkDocs, Docusaurus, or Docker, configuring renderer pipelines in docs.yaml, or selecting a Docs-as-Code SSG vs Collaborative Wiki platform.
 
 ---
 

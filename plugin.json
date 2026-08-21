@@ -1,23 +1,23 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "pageworks",
   "version": "0.2.0",
   "description": "Public-facing software & platform documentation skill — owns the docs/ surface end-to-end: Dual-Dimension Architecture (6 Page Classes & 6 Topic Categories), scaffold, schema, page authoring, renderer export (MkDocs Material, Docusaurus v3+, Docker), and 180-day stale-page drift maintenance.",
   "author": {
-    "name": "Alessandro Smedile"
+    "name": "Alessandro Smedile",
+    "url": "https://github.com/alexsmedile"
   },
   "homepage": "https://github.com/alexsmedile/pageworks",
   "repository": "https://github.com/alexsmedile/pageworks",
   "license": "MIT",
   "keywords": [
-    "pageworks",
     "documentation",
     "docs",
     "wiki",
     "mkdocs",
     "docusaurus",
     "diataxis",
-    "authoring",
-    "claude-code",
-    "skills"
+    "platform",
+    "software-engineering"
   ]
 }

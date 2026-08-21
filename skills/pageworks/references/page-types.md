@@ -1,13 +1,10 @@
 # Page Types & Classes — The 6 Core Functional Formats
 
+Use this when: Choosing a page format class for `pageworks new`, auditing class fitness in `pageworks review`, or structuring documentation taxonomy.
+
 Pageworks organizes documentation around the **6 Core Classes of Pages**, grounding the [Diátaxis](https://diataxis.fr/) framework in production software and platform engineering workflows.
 
 Every page in a documentation tree must serve a single clear purpose. Mixing these formats leads to unreadable, bloated documentation.
-
-Loaded when:
-- `pageworks new <page>` (deciding which format and template to scaffold)
-- `pageworks review` (evaluating whether a page matches its declared class)
-- Reviewing documentation structure and taxonomy
 
 ---
 

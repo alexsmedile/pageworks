@@ -1,6 +1,6 @@
 # Contract — Schema & Information Architecture for Software Documentation
 
-Loaded when the orchestrator handles any `pageworks <verb>` command involving `docs/`, or when `pageworks doctor` runs.
+Use this when: Scaffolding a docs/ tree, declaring sections in docs.yaml, configuring manifest schemas, or validating frontmatter schemas.
 
 Authoritative schema and structural rules for the `docs/` documentation surface.
 
@@ -61,41 +61,53 @@ sections:
   - id: services
     title: Services & Components
     order: 3
-    pages: []
+    pages: [auth-service]
 
   - id: operations
     title: Operations & Reliability
     order: 4
-    pages: []
+    pages: [rotate-secrets, 2026-05-auth-outage]
 
   - id: reference
     title: API & Data Reference
     order: 5
-    pages: []
+    pages: [api-v2]
 
   - id: standards
     title: Standards & Governance
     order: 6
-    pages: []
+    pages: [review-checklist]
 
-extras:                          # optional top-level entries
-  - changelog
+# Optional top-level unsectioned pages (e.g. changelog, troubleshooting)
+# extras:
+#   - changelog
+
+# Optional renderer hints (consumed by 'pageworks export <renderer>')
+# renderers:
+#   mkdocs:
+#     theme: material
+#     primary: indigo
+#     scheme: slate
+#   docusaurus:
+#     preset: classic
+#     organizationName: org
+#     projectName: project
 ```
 
 ---
 
-## Page Frontmatter Schema
+## Page Frontmatter Contract
 
-Every Markdown file in `docs/` must declare structured YAML frontmatter:
+Every `.md` file inside `docs/` must begin with YAML frontmatter:
 
 ```yaml
 ---
-title: "Rotate Database Credentials"
-description: "Step-by-step runbook for rotating PostgreSQL database credentials in production."
-section: operations
-type: runbook
-status: stable
-owner: "@platform-sre"
+title: "Document Title"
+description: "A single sentence summary."
+section: "getting-started"
+type: "tutorial"
+status: "stable"
+owner: "@platform-core"
 last_reviewed: 2026-08-22
 updated: 2026-08-22
 since: 1.0.0
@@ -127,7 +139,7 @@ synced_from: ../../../.spectacular/contracts/CC-cli.md
 | **error** | `docs.yaml` missing or invalid YAML syntax |
 | **error** | Declared page in `docs.yaml` missing from filesystem |
 | **error** | Page missing required frontmatter (`title`, `description`, `section`, `status`, `updated`) |
-| **error** | Broken internal Markdown link (`[text](target.md)` target does not exist) |
+| **error** | Broken internal Markdown link (link target does not exist on disk) |
 | **error** | Folder hierarchy depth exceeds 3 levels |
 | **warning** | Missing `owner:` frontmatter field |
 | **warning** | Orphan Markdown file (present on disk but omitted from `docs.yaml`) |

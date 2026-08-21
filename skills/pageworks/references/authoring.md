@@ -1,11 +1,11 @@
 # Authoring — Page Lifecycle Verbs
 
-Loaded when handling `pageworks new`, `pageworks review`, or `pageworks status` (skill-side verbs that involve writing or auditing documentation).
+Use this when: Scaffolding new documentation pages, choosing template classes, declaring new sections, or running quality review gates.
 
-- Schema and Information Architecture: [[contract]]
-- The 6 Core Page Classes: [[page-types]]
-- Voice, Tone & Action Headings: [[prose-patterns]]
-- Drift Detection & Stale Auditing: [[maintenance]]
+- Schema and Information Architecture: [contract.md](contract.md)
+- The 6 Core Page Classes: [page-types.md](page-types.md)
+- Voice, Tone & Action Headings: [prose-patterns.md](prose-patterns.md)
+- Drift Detection & Stale Auditing: [maintenance.md](maintenance.md)
 
 ---
 
@@ -55,13 +55,12 @@ Executes mechanical and judgment checks across `docs/`:
 ### 1. Mechanical Checks (`pageworks doctor` alignment)
 - `docs.yaml` syntax and section alignment.
 - Required frontmatter presence: `title`, `description`, `section`, `status`, `updated`, and `owner`.
-- Broken internal links (`[text](relative-path.md)`).
+- Broken internal links (`target-path.md`).
 - Hierarchy depth $\le 3$ levels.
 - 180-day stale review warnings.
 
-### 2. Style & Prose Checklist
-- **Headings**: Imperative verbs for procedural pages ("Configure Variables" vs "Configuration Info").
-- **Code Snippets**: Copy-paste ready without uncopyable `$` prompts; standard `<PLACEHOLDER>` tags.
-- **Visuals**: Mermaid.js diagrams for architecture, data flows, and service topologies.
-- **Diátaxis Discipline**: No tutorial steps buried in reference specs; no marketing fluff in explanations.
-- **Status Integrity**: No `<!-- TODO -->` tags in `status: stable` pages.
+### 2. Judgment Checks (Prose & Pattern alignment)
+- **Class fit**: Does this tutorial contain reference walls? Is this runbook task-oriented?
+- **Imperative headings**: Are procedural steps active ("Configure Environment Variables" vs "Configuration")?
+- **Copy-paste readiness**: Are bash commands isolated, tagged, and using `<PLACEHOLDER>`?
+- **Visuals-first**: Does complex topology use Mermaid.js diagrams?
