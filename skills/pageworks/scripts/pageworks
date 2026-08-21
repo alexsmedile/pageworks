@@ -739,6 +739,9 @@ on:
   push:
     branches: [main]
     paths: ['docs/**', 'mkdocs.yml', '.github/workflows/docs.yml']
+  pull_request:
+    branches: [main]
+    paths: ['docs/**', 'mkdocs.yml', '.github/workflows/docs.yml']
   workflow_dispatch:
 
 permissions:
@@ -758,13 +761,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
       - run: pip install mkdocs mkdocs-material
       - run: mkdocs build --strict --site-dir _site
       - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
         with:
           path: _site
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -779,6 +785,9 @@ jobs:
 name: Deploy docs (Docusaurus)
 on:
   push:
+    branches: [main]
+    paths: ['docs/**', 'docusaurus.config.js', 'sidebars.js', '.github/workflows/docs.yml']
+  pull_request:
     branches: [main]
     paths: ['docs/**', 'docusaurus.config.js', 'sidebars.js', '.github/workflows/docs.yml']
   workflow_dispatch:
@@ -800,13 +809,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
       - run: npm ci
       - run: npx docusaurus build
       - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
         with:
           path: build
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -890,6 +902,31 @@ cmd_export() {
   elif (( DOCS_EXPORT_SKIPPED > 0 || DOCS_EXPORT_PINNED > 0 )); then
     echo "All targets up to date. Use --force to overwrite non-pinned files."
   fi
+}
+
+# ── sync-ack ────────────────────────────────────────────────────────────────
+cmd_sync_ack() {
+  local target="${1:-}"
+  [[ -z "$target" ]] && die "Usage: pageworks sync-ack <path/to/page.md>"
+  [[ -f "$target" ]] || target="docs/${target}"
+  [[ -f "$target" ]] || target="docs/${target}.md"
+  [[ -f "$target" ]] || die "File not found: '$1'"
+
+  if grep -qE '^last_reviewed:' "$target"; then
+    awk -v today="$TODAY" '
+      /^last_reviewed:/ { print "last_reviewed: " today; next }
+      { print }
+    ' "$target" > "${target}.tmp" && mv "${target}.tmp" "$target"
+  else
+    awk -v today="$TODAY" '
+      /^---$/ {
+        c++
+        if (c == 2) print "last_reviewed: " today
+      }
+      { print }
+    ' "$target" > "${target}.tmp" && mv "${target}.tmp" "$target"
+  fi
+  echo "  ✓ Acknowledged freshness: ${target} → last_reviewed: ${TODAY}"
 }
 
 # ── doctor ──────────────────────────────────────────────────────────────────
@@ -1242,9 +1279,10 @@ main() {
     ""|--help|-h|help)
       top_usage; exit 0
       ;;
-    init)   shift; cmd_init   "$@" ;;
-    export) shift; cmd_export "$@" ;;
-    doctor) shift; cmd_doctor "$@" ;;
+    init)     shift; cmd_init     "$@" ;;
+    export)   shift; cmd_export   "$@" ;;
+    doctor)   shift; cmd_doctor   "$@" ;;
+    sync-ack) shift; cmd_sync_ack "$@" ;;
     new)
       shift
       skill_verb_message "new" "Scaffolds a page (asks for 6 Core Classes format + section + title)."
