@@ -266,6 +266,37 @@ YAML
   rm -rf "$dir"
 }
 
+scenario_13_mkdocs_mermaid_and_features() {
+  echo "Scenario 13: mkdocs exports mermaid superfences and features"
+  local dir="/tmp/pageworks-export-test-13"
+  setup_docs "$dir"
+
+  run_cli "$dir" export mkdocs --no-workflow >/dev/null
+
+  assert_file_contains "$dir/mkdocs.yml" "name: mermaid"
+  assert_file_contains "$dir/mkdocs.yml" "navigation.instant"
+  assert_file_contains "$dir/mkdocs.yml" "content.code.copy"
+  assert_file_contains "$dir/mkdocs.yml" "pymdownx.tabbed"
+
+  rm -rf "$dir"
+}
+
+scenario_14_docusaurus_package_and_css() {
+  echo "Scenario 14: docusaurus exports package.json and custom.css"
+  local dir="/tmp/pageworks-export-test-14"
+  setup_docs "$dir"
+
+  run_cli "$dir" export docusaurus --no-workflow >/dev/null
+
+  assert_file_exists "$dir/package.json"
+  assert_file_exists "$dir/src/css/custom.css"
+  assert_file_contains "$dir/package.json" "@docusaurus/core"
+  assert_file_contains "$dir/package.json" "@docusaurus/preset-classic"
+  assert_file_contains "$dir/docusaurus.config.js" "routeBasePath: '/'"
+
+  rm -rf "$dir"
+}
+
 echo "=== export.test.sh ==="
 scenario_1_no_renderer
 scenario_2_mkdocs
@@ -279,6 +310,8 @@ scenario_9_missing_manifest
 scenario_10_mkdocs_drops_empty_sections
 scenario_11_docusaurus_drops_empty_sections
 scenario_12_renderers_block_consumed
+scenario_13_mkdocs_mermaid_and_features
+scenario_14_docusaurus_package_and_css
 
 echo ""
 echo "Results: ${pass_count} passed, ${fail_count} failed"

@@ -1081,10 +1081,35 @@ cmd_doctor() {
   shopt -s nullglob
   for page_file in "$docs_dir"/*.md "$docs_dir"/*/*.md; do
     [[ -f "$page_file" ]] || continue
+    local rel_page="${page_file#$docs_dir/}"
+    local p_sec=""
+    [[ "$rel_page" == *"/"* ]] && p_sec="${rel_page%/*}"
+    local p_slug
+    p_slug=$(basename "$page_file" .md)
+
     if ! head -1 "$page_file" | grep -q '^---$'; then
-      doctor_emit "error" "$page_file" "missing frontmatter delimiter" \
-        "add proper frontmatter block"
-      continue
+      if $DOCTOR_FIX; then
+        local p_title
+        p_title="$(docs_page_title "$page_file" "$p_slug")"
+        local new_content="---
+title: ${p_title}
+description: Documentation for ${p_title}.
+section: ${p_sec}
+type: explanation
+status: draft
+owner: \"@platform-core\"
+last_reviewed: ${TODAY}
+updated: ${TODAY}
+---
+
+$(cat "$page_file")"
+        printf '%s\n' "$new_content" > "$page_file"
+        doctor_emit "pass" "$page_file" "injected missing frontmatter block (--fix applied)"
+      else
+        doctor_emit "error" "$page_file" "missing frontmatter delimiter" \
+          "add proper frontmatter block (or run 'pageworks doctor --fix')"
+        continue
+      fi
     fi
 
     local fm
@@ -1092,8 +1117,31 @@ cmd_doctor() {
     
     for field in $required_fields; do
       if ! echo "$fm" | grep -qE "^${field}:"; then
-        doctor_emit "error" "$page_file" "missing required frontmatter field: ${field}" \
-          "add '${field}:' to frontmatter (or run 'pageworks doctor --fix')"
+        if $DOCTOR_FIX; then
+          local field_val=""
+          case "$field" in
+            title) field_val="$(docs_page_title "$page_file" "$p_slug")" ;;
+            description) field_val="Documentation for $(docs_page_title "$page_file" "$p_slug")." ;;
+            section) field_val="${p_sec}" ;;
+            status) field_val="draft" ;;
+            updated) field_val="${TODAY}" ;;
+          esac
+          # Inject field into frontmatter right before the closing ---
+          awk -v field="$field" -v val="$field_val" '
+            /^---$/ {
+              c++
+              if (c == 2) {
+                print field ": " val
+              }
+            }
+            { print }
+          ' "$page_file" > "${page_file}.tmp" && mv "${page_file}.tmp" "$page_file"
+          fm=$(awk '/^---$/ { count++; if (count == 2) exit; next } count == 1' "$page_file")
+          doctor_emit "pass" "$page_file" "repaired missing '${field}:' field (--fix applied)"
+        else
+          doctor_emit "error" "$page_file" "missing required frontmatter field: ${field}" \
+            "add '${field}:' to frontmatter (or run 'pageworks doctor --fix')"
+        fi
       fi
     done
 

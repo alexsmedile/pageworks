@@ -34,6 +34,10 @@ assert_not_contains() {
   if ! echo "$1" | grep -qF "$2"; then pass_count=$((pass_count + 1))
   else echo "    ✗ output unexpectedly contains: $2"; fail_count=$((fail_count + 1)); fi
 }
+assert_file_contains() {
+  if [[ -f "$1" ]] && grep -qF "$2" "$1"; then pass_count=$((pass_count + 1))
+  else echo "    ✗ expected '$1' to contain '$2'"; fail_count=$((fail_count + 1)); fi
+}
 assert_exit() {
   local got="$1" want="$2" label="$3"
   if [[ "$got" -eq "$want" ]]; then pass_count=$((pass_count + 1))
@@ -372,6 +376,25 @@ EOF
   rm -rf "$dir"
 }
 
+scenario_16_doctor_fix_repairs() {
+  echo "Scenario 16: doctor --fix mechanically repairs missing frontmatter"
+  local dir="/tmp/pageworks-doctor-test-16"
+  setup_docs "$dir"
+
+  # Page missing frontmatter completely
+  echo "# Completely Bare Page" > "$dir/docs/getting-started/install.md"
+
+  local output exit_code=0
+  if output=$(run_cli "$dir" doctor --fix 2>&1); then exit_code=0; else exit_code=$?; fi
+
+  assert_exit "$exit_code" 0 "doctor --fix exits 0"
+  assert_contains "$output" "injected missing frontmatter block"
+  assert_file_contains "$dir/docs/getting-started/install.md" "title: Completely Bare Page"
+  assert_file_contains "$dir/docs/getting-started/install.md" "owner: \"@platform-core\""
+
+  rm -rf "$dir"
+}
+
 echo "=== doctor.test.sh ==="
 scenario_1_no_docs
 scenario_2_no_manifest
@@ -388,6 +411,7 @@ scenario_12_stale_content_warning
 scenario_13_broken_internal_link
 scenario_14_deep_nesting_error
 scenario_15_six_core_classes_valid
+scenario_16_doctor_fix_repairs
 
 echo ""
 echo "Results: ${pass_count} passed, ${fail_count} failed"
