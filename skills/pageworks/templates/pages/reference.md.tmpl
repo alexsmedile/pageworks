@@ -1,66 +1,59 @@
 ---
-title: <Reference subject — noun-led, e.g., "CLI commands", "Configuration schema">
-description: <One sentence — what this page documents>
+title: <Reference subject — noun-led, e.g., "Payment API v2", "CLI Flags">
+description: <One sentence — factual scope of this reference>
 section: reference
 type: reference
 status: stable
-since: <version>
+owner: <team-or-role — e.g., "@payments-core">
+last_reviewed: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
 ---
 
 # <Reference subject>
 
-<One-paragraph orientation: what this reference covers, what it doesn't, where to find related material. Reference pages are read in pieces, not top-to-bottom — make scanning easy.>
+<One-paragraph orientation: scope of this reference spec, schema definitions, and endpoints. Keep concise and factual.>
 
-## At a glance
+## Summary Table
 
-| <Column> | <Column> | <Column> |
-|---|---|---|
-| <Item> | <Detail> | <Detail> |
-| <Item> | <Detail> | <Detail> |
-
-## <First subject group>
-
-### `<entity name>`
-
-<One-line summary.>
-
-**Signature**
-
-```
-<formal signature, CLI flags, schema fragment, etc.>
-```
-
-**Parameters**
-
-| Name | Type | Required | Default | Description |
+| Parameter / Flag / Endpoint | Type / Method | Required | Default | Description |
 |---|---|---|---|---|
-| `<param>` | `<type>` | yes/no | `<default>` | <description> |
+| `<param_1>` | `string` | yes | — | <Description of parameter> |
+| `<param_2>` | `integer` | no | `30` | <Timeout in seconds> |
 
-**Returns / Effect**
+## Endpoint Specifications
 
-<What it produces or changes.>
+### `POST /api/v2/<resource>`
 
-**Example**
+Creates a new `<resource>` instance.
 
-```bash
-<minimal example>
+**Headers**
+- `Authorization`: `Bearer <TOKEN>` (Required)
+- `Content-Type`: `application/json`
+
+**Request Payload**
+
+```json
+{
+  "name": "<RESOURCE_NAME>",
+  "tier": "enterprise",
+  "enabled": true
+}
 ```
 
+**Response (`201 Created`)**
+
+```json
+{
+  "id": "res_01a026aa",
+  "status": "active",
+  "created_at": "2026-08-22T00:00:00Z"
+}
 ```
-<output>
-```
 
-**See also**
+## Error Codes
 
-- <Related entity>
-
----
-
-### `<next entity>`
-
-<Repeat the pattern. Reference pages are repetitive on purpose — predictability beats variety.>
-
-## Versioning
-
-<If applicable: which version added/changed/removed what. Brief; link to CHANGELOG for full history.>
+| HTTP Status | Error Code | Meaning & Resolution |
+|---|---|---|
+| `400` | `INVALID_PAYLOAD` | Request body failed JSON schema validation. |
+| `401` | `EXPIRED_TOKEN` | Bearer token expired; refresh credentials. |
+| `409` | `RESOURCE_CONFLICT` | Resource with this unique name already exists. |

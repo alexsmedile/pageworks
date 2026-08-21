@@ -1,0 +1,62 @@
+---
+title: "ADR <NUMBER>: <Short Title — e.g., '0004 Use Postgres for Events'>"
+description: <One sentence summarizing the architectural decision and rationale>
+section: architecture
+type: adr
+status: accepted # proposed | accepted | superseded | rejected
+owner: <team-or-role — e.g., "@platform-core">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+deciders:
+  - <Name or Role>
+supersedes: <ADR-NUMBER or "none">
+superseded_by: <ADR-NUMBER or "none">
+---
+
+# ADR <NUMBER>: <Short Title>
+
+## Context & Problem Statement
+
+<What is the problem or architectural need? What forces, requirements, or constraints (cost, latency, scale, team skills) are influencing this choice? Avoid decisions in a vacuum.>
+
+## Decision Drivers
+
+- <Driver 1 — e.g., 'Need ACID compliance for financial audit trails'>
+- <Driver 2 — e.g., 'Zero new operational dependencies for the on-call team'>
+- <Driver 3 — e.g., 'Target p99 write latency under 15ms'>
+
+## Considered Options
+
+- **Option 1**: <Name / Approach> — <One-sentence summary>
+- **Option 2**: <Name / Approach> — <One-sentence summary>
+- **Option 3**: <Name / Approach> — <One-sentence summary>
+
+## Decision Outcome
+
+**Chosen option**: **<Option Name>**, because <positive rationale linking back to decision drivers>.
+
+### Positive Consequences
+
+- <Benefit 1>
+- <Benefit 2>
+
+### Negative Consequences / Trade-offs
+
+- <Trade-off 1 — what complexity or limitation are we explicitly accepting?>
+- <Trade-off 2>
+
+## Pros and Cons of the Options
+
+### <Option 1: Name>
+
+- **Good**: <Advantage>
+- **Bad**: <Disadvantage>
+
+### <Option 2: Name>
+
+- **Good**: <Advantage>
+- **Bad**: <Disadvantage>
+
+## Compliance & Verification
+
+<How will we verify that this decision is followed in code reviews, CI checks, or architecture audits?>

@@ -10,6 +10,7 @@
 #   6. docs.yaml includes commented renderers: example
 #   7. Empty docs/ folder is filled with manifest + sections
 #   8. init --help shows usage
+#   9. --preset platform scaffolds 6 Main Topic Categories
 
 set -u
 
@@ -159,6 +160,27 @@ scenario_8_help() {
   assert_contains "$output" "init"
 }
 
+scenario_9_preset_platform() {
+  echo "Scenario 9: --preset platform scaffolds 6 Main Topic Categories"
+  local dir="/tmp/pageworks-init-test-9"
+  rm -rf "$dir" && mkdir -p "$dir"
+
+  run_cli "$dir" init --preset platform >/dev/null
+
+  assert_dir_exists "$dir/docs/getting-started"
+  assert_dir_exists "$dir/docs/architecture"
+  assert_dir_exists "$dir/docs/services"
+  assert_dir_exists "$dir/docs/operations"
+  assert_dir_exists "$dir/docs/reference"
+  assert_dir_exists "$dir/docs/standards"
+  assert_file_contains "$dir/docs/docs.yaml" "id: architecture"
+  assert_file_contains "$dir/docs/docs.yaml" "id: services"
+  assert_file_contains "$dir/docs/docs.yaml" "id: operations"
+  assert_file_contains "$dir/docs/docs.yaml" "id: standards"
+
+  rm -rf "$dir"
+}
+
 echo "=== init.test.sh ==="
 scenario_1_default_init
 scenario_2_minimal
@@ -168,6 +190,7 @@ scenario_5_diataxis_type_in_pages
 scenario_6_renderers_example_in_manifest
 scenario_7_existing_empty_docs
 scenario_8_help
+scenario_9_preset_platform
 
 echo ""
 echo "Results: ${pass_count} passed, ${fail_count} failed"

@@ -1,0 +1,80 @@
+---
+title: "<Service Name> — Service Catalog"
+description: "<One-sentence summary of the service purpose and capability>"
+section: services
+type: service-catalog
+status: stable
+owner: <team-or-role — e.g., "@auth-team">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+tier: <Tier 1 (Mission-Critical) | Tier 2 (Core) | Tier 3 (Supporting)>
+lifecycle: <production | staging | deprecated | experimental>
+---
+
+# <Service Name>
+
+<One-paragraph summary: what this service or component does, who uses it, and its system boundaries.>
+
+## Ownership & Quick Links
+
+| Property | Value |
+|---|---|
+| **Owning Team** | <Team Name — e.g., Platform Identity> |
+| **Slack Channel** | `#<channel-name>` |
+| **On-Call Rotation** | [PagerDuty Escalation Policy](<URL>) |
+| **Source Repository** | [github.com/org/<repo>](<URL>) |
+| **Staging Endpoint** | `https://staging.<service>.internal` |
+| **Production Endpoint** | `https://<service>.internal` |
+| **Observability Dashboard** | [Grafana / Datadog](<URL>) |
+| **Error Tracking** | [Sentry Project](<URL>) |
+
+## System Topology & Architecture
+
+```mermaid
+flowchart LR
+    Client["Clients / API Gateway"] --> Svc["<Service Name>"]
+    Svc --> DB[("PostgreSQL / Datastore")]
+    Svc --> Bus["Event Bus (Kafka / NATS)"]
+    Svc --> Ext["External Provider (Stripe / Auth0)"]
+```
+
+## Service Level Objectives (SLOs)
+
+| Metric | Target | Measurement Window | Alert Channel |
+|---|---|---|---|
+| **Availability** | 99.95% | 30-day rolling | `#alerts-sev1` |
+| **p99 Latency** | < 120ms | 5-minute rolling | `#alerts-sev2` |
+| **Error Rate** | < 0.05% | 5-minute rolling | `#alerts-sev2` |
+
+## Dependencies
+
+### Upstream (Who calls this service)
+- `<Service / Consumer 1>`
+- `<Service / Consumer 2>`
+
+### Downstream (What this service calls)
+- `<Service / Database / Queue 1>`
+- `<Service / Database / Queue 2>`
+
+## Local Development & Health Checks
+
+### Health Check Endpoint
+
+```bash
+curl -f https://<service>.internal/healthz
+```
+
+### Local Dev Setup
+
+```bash
+git clone git@github.com:org/<repo>.git
+cd <repo>
+docker compose up -d
+npm run dev
+```
+
+## Key Runbooks & Documentation
+
+- [Deployment & Rollback Runbook](../operations/<service>-deploy-runbook.md)
+- [Secrets Rotation Guide](../operations/<service>-secrets.md)
+- [API Reference](../reference/<service>-api.md)

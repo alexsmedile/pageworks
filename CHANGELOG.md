@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [0.2.0] — 2026-08-22 — Software & Platform Wiki Dual-Dimension Architecture
+
+### Added
+- **6 Core Classes of Pages**: First-class templates and taxonomy for Tutorials/Onboarding, How-To/Runbooks, ADRs, Technical Reference Specs, Service Catalog One-Pagers, and Incident Postmortems (`skills/pageworks/templates/pages/`).
+- **6 Main Topic Categories**: Information Architecture scaffolding around Getting Started, Architecture & System Design, Services & Components, Operations & Reliability, API & Data Reference, and Standards & Governance.
+- **`pageworks init --preset platform`**: Scaffolds the full 6-category software & platform wiki structure.
+- **Rich "Start Here" Landing Pages**: Modernized `docs/index.md` template with system purpose, explicit ownership metadata, Mermaid.js architecture diagrams, and dev environment onboarding.
+- **Governance & Stale Content Auditing**:
+  - `owner:` and `last_reviewed:` frontmatter fields with doctor validation.
+  - 180-day (6-month) stale-page trigger in `pageworks doctor` and `pageworks audit`.
+  - Automatic internal markdown link checker in `pageworks doctor`.
+  - Maximum 3-level folder hierarchy enforcement.
+- **Writing & Visual Standards**: Imperative action-oriented headings, copy-paste ready code snippet standards, and Mermaid.js system topology guidelines.
+- **Spectacular v2 Compatibility**: Full integration with Spectacular v2.5.0 Anchors and capability contracts.
+
 ## [0.1.0] — 2026-05-23 — first release
 
 **Pageworks ships.** Public-facing documentation moves out of spectacular into its own skill + CLI. Standalone-capable; pairs cleanly with spectacular when both are installed.

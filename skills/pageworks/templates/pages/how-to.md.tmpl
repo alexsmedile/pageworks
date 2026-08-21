@@ -1,48 +1,61 @@
 ---
-title: <How to <verb> <object> — e.g., "How to deploy to Cloudflare Pages">
-description: <One sentence — the specific outcome>
+title: <How to <verb> <object> — e.g., "How to rotate staging API keys">
+description: <One sentence — the specific problem solved>
 section: <section-id>
-type: how-to
+type: how-to # or runbook
 status: draft
-since: <version>
+owner: <team-or-role — e.g., "@platform-sec">
+last_reviewed: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
 applies_to:
-  - <Scenario or version range this applies to>
+  - <Scenario, environment, or version range>
 ---
 
 # <How to <verb> <object>>
 
-<One sentence: who this is for and what they get when they finish. Assume they already know the basics — link to tutorials for those.>
+<One sentence: who this is for and what problem it solves. Assume competence — get straight to the recipe.>
 
 ## When to use this
 
-<2–3 bullets describing the scenario. Make it easy for a reader to confirm "yes, this is my problem.">
+- <Scenario trigger 1 — e.g., 'Staging credentials expire or are leaked'>
+- <Scenario trigger 2 — e.g., 'Routine quarterly secret rotation'>
 
-- <Scenario marker 1>
-- <Scenario marker 2>
+## Prerequisites
 
-## Steps
+- Access to target environment: `vault login`
+- CLI toolchain installed: `<TOOL_NAME>`
 
-1. <Imperative, one action per step. No "what is X" digressions — link out instead.>
-2. <Step.>
-3. <Step.>
+## Action Steps
+
+### Step 1 — <Action-oriented subhead — e.g., 'Generate new credential in Vault'>
 
 ```bash
-<commands grouped where helpful>
+export VAULT_ADDR="https://vault.internal:8200"
+vault kv put secret/staging/api-keys key="<NEW_API_KEY>"
 ```
 
-## Verify
+### Step 2 — <Action-oriented subhead — e.g., 'Trigger deployment reload'>
 
-<One quick check the reader runs to confirm success.>
+```bash
+kubectl rollout restart deployment/<SERVICE_NAME> -n staging
+```
+
+## Verify Resolution
+
+<Execute a command to confirm the recipe succeeded.>
+
+```bash
+curl -H "Authorization: Bearer <NEW_API_KEY>" https://staging.internal/api/v1/ping
+```
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| <Error message or behavior> | <Why it happens> | <What to do> |
-| <…> | <…> | <…> |
+| `401 Unauthorized` | New secret has not propagated to pod environment | Wait 30s or check `kubectl get pods` restart status |
+| `500 Server Error` | Key format mismatch | Ensure key does not contain unescaped newline characters |
 
 ## Related
 
-- <Link to reference for the commands/options used>
-- <Link to other how-tos for adjacent tasks>
+- [API Reference](../reference/api-v2.md)
+- [Architecture: Secret Management ADR](../architecture/0002-vault-secrets.md)

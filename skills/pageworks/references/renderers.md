@@ -1,108 +1,90 @@
-# Renderers — MkDocs + Docusaurus
+# Renderers & Wiki Platforms — Architecture, SSGs, and Self-Hosted Wikis
 
-Loaded when the orchestrator handles `pageworks export <renderer>`, or when authoring renderer-aware `docs.yaml` blocks.
+Loaded when handling `pageworks export <renderer>`, configuring renderer pipelines in `docs.yaml`, or deciding between **Docs-as-Code** (SSGs) vs. **Collaborative Wiki Platforms**.
 
-Pairs with [[contract]] (the canonical schema). This file documents how that schema translates to two concrete OSS renderers and how the generated `.github/workflows/docs.yml` deploys the result to GitHub Pages.
+---
 
-## Scope
+## 1. The Platform Landscape: Docs-as-Code vs. Collaborative Wikis
 
-| Renderer | Status | Why |
+The right documentation platform depends on team workflows:
+
+| Platform | Type / Engine | Best For | Key Strengths & Trade-offs |
+|---|---|---|---|
+| **MkDocs (Material)** | Docs-as-Code (Python) | Internal engineering docs, APIs, runbooks | **Zero JS overhead**, instant client-side search, tabs, Mermaid diagrams, lowest configuration barrier. |
+| **Docusaurus (v3+)** | Docs-as-Code (Node / React) | Public developer portals & product docs | **React/MDX ecosystem**, multi-versioning (v1 vs v2), i18n, custom JSX components in Markdown. |
+| **Starlight (Astro)** | Docs-as-Code (Astro / Vite) | High-performance developer docs | Exceptionally fast load times, minimal client JS footprint, built-in search and MDX support. |
+| **Scalar / Redoc** | Specialized API Documentation | OpenAPI / Swagger-first platforms | Turns OpenAPI JSON/YAML into interactive, searchable API reference portals with mock request builders. |
+| **Docmost** | Self-Hosted Wiki (Node / AGPL-3.0) | Cross-functional team wiki | Real-time collaborative rich editor, nested spaces, user permissions, simple Docker Compose deploy. |
+| **Outline** | Self-Hosted Wiki (Node / Source-avail) | Notion-like engineering & product wiki | Clean block-based Markdown editor, fast UI, team permissions (requires SSO/OIDC like Google/Okta). |
+| **BookStack** | Self-Hosted Wiki (PHP / Laravel) | Operational & non-technical teams | Enforced 4-level structure (Shelves $\to$ Books $\to$ Chapters $\to$ Pages), simple WYSIWYG/Markdown. |
+| **Wiki.js** | Self-Hosted Wiki (Node / Vue) | Hybrid teams wanting Git sync | 2-way Git synchronization, multiple auth backends, modular search engines (Elasticsearch, PostgreSQL). |
+
+---
+
+## 2. Deep Dive: MkDocs (Material) vs. Docusaurus (v3+)
+
+Both follow the **Docs-as-Code** model: Markdown stored in Git alongside application code, compiled to pure static HTML/CSS/JS assets, and hosted without server runtimes in production.
+
+### Architectural Comparison
+
+| Layer | MkDocs (Material Theme) | Docusaurus (v3+) |
 |---|---|---|
-| **MkDocs (Material)** | shipped (v0.1.0) | Smallest config surface (YAML only), Python-native, GitHub Pages one-shot deploy. The default recommendation. |
-| **Docusaurus** | shipped (v0.1.0) | React-based, Meta-maintained, structurally different from MkDocs — validates the schema is renderer-agnostic. |
-| Mintlify | not shipped | Source-available, paid for production. Community contributions welcome — see [Contributing a renderer](#contributing-a-renderer) below. |
-| Fumadocs | not shipped | Next.js lock-in. Community contributions welcome. |
+| **Language / Engine** | Python (Jinja2 templating) | Node.js (React + Webpack) |
+| **Frontend Architecture** | Server-rendered HTML with lightweight vanilla JS (instant search, theme toggle, code copy, tabs). | Single Page App (SPA) with hybrid pre-rendering. Hydrates into React on client for smooth transitions. |
+| **Server Runtime** | **None in production.** Built-in Python WSGI server for local hot-reloading. | **None in production.** Webpack dev server with React Fast Refresh for development. |
+| **Content Format** | Standard CommonMark / GFM extended via Python-Markdown extensions. | MDX (`.md` and `.mdx`), allowing embedded React components directly in Markdown. |
+| **Search Engine** | Built-in Lunr.js / Web Workers indexed at build time. | Client-side local search plugin (`@easyops-cn/docusaurus-search-local`) or Algolia DocSearch. |
+| **Customization** | YAML config overrides, CSS variables, Jinja2 template blocks. | Full React component shadowing, custom JSX layouts, plugins, and CSS modules. |
 
-## Invocation
+---
 
-```bash
-pageworks export mkdocs     [--out <path>] [--force]
-pageworks export docusaurus [--out <path>] [--force]
-```
+## 3. MkDocs (Material) Workflow
 
-- Default `--out` for both: write configs **alongside `docs/`** at the repo root (e.g., `./mkdocs.yml`, `./docusaurus.config.js`, `./sidebars.js`).
-- Both adapters also write `.github/workflows/docs.yml` for GitHub Pages deployment (idempotent — skipped if present unless `--force`).
-- Default behavior is **safe**: existing files are skipped with a clear report. Use `--force` to overwrite.
-
-## `docs.yaml` extension — `renderers:` block
-
-The base schema in [[contract]] is renderer-neutral. Adapters consume an **optional** `renderers:` block for renderer-specific knobs that don't fit the neutral schema:
+### Generated `mkdocs.yml`
 
 ```yaml
-site:
-  name: MyProject
-  tagline: AI-native operational workspace
-  base_url: https://example.github.io/myproject/
-
-sections:
-  - id: getting-started
-    title: Getting Started
-    order: 1
-    pages: [install, quickstart]
-  # ...
-
-renderers:                              # optional, additive
-  mkdocs:
-    theme: material                     # default; only override if needed
-    palette:
-      primary: "indigo"
-      scheme: "slate"
-    plugins:                            # extra plugins beyond the defaults
-      - search
-      - awesome-pages
-    repo_url: https://github.com/example/myproject
-    edit_uri: edit/main/docs/
-
-  docusaurus:
-    preset: classic
-    organizationName: alexsmedile
-    projectName: myproject
-    themeConfig:
-      navbar:
-        title: MyProject
-        logo:
-          src: img/logo.svg
-      colorMode:
-        defaultMode: dark
-```
-
-All keys under `renderers.<name>` are optional. Anything not declared falls back to the adapter's defaults (documented per-renderer below).
-
-## MkDocs (Material) mapping
-
-### `docs.yaml` → `mkdocs.yml`
-
-| `docs.yaml` source | `mkdocs.yml` target |
-|---|---|
-| `site.name` | `site_name` |
-| `site.tagline` | `site_description` |
-| `site.base_url` | `site_url` |
-| `sections[*]` (sorted by `order`) | `nav:` block, one `- <title>:` per section |
-| `sections[*].pages[*]` | `nav:` nested list, `- <page-title>: <section>/<page>.md` |
-| `extras[*]` | `nav:` top-level entries, `- <title>: <page>.md` |
-| `renderers.mkdocs.theme` | `theme.name` (default: `material`) |
-| `renderers.mkdocs.palette` | `theme.palette` |
-| `renderers.mkdocs.plugins` | `plugins:` (merged with adapter defaults: `search`) |
-| `renderers.mkdocs.repo_url` | `repo_url` |
-| `renderers.mkdocs.edit_uri` | `edit_uri` |
-| (page frontmatter `title`) | nav label (overrides `pages` slug-derived title) |
-| (page frontmatter `description`) | rendered as page meta description |
-
-### Generated `mkdocs.yml` example
-
-```yaml
-# Generated by pageworks export mkdocs — edits will be preserved unless --force.
-site_name: MyProject
-site_description: AI-native operational workspace
-site_url: https://example.github.io/myproject/
-repo_url: https://github.com/example/myproject
-edit_uri: edit/main/docs/
+# Generated by pageworks export mkdocs
+site_name: Platform Docs
+site_description: Software & platform documentation
+docs_dir: docs
 
 theme:
   name: material
   palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
     - scheme: slate
       primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
 
 plugins:
   - search
@@ -112,97 +94,81 @@ nav:
   - Getting Started:
       - Install: getting-started/install.md
       - Quickstart: getting-started/quickstart.md
-  - Reference:
-      - Commands: reference/commands.md
-      - Configuration: reference/configuration.md
-  - Changelog: changelog.md
 ```
 
-### Page frontmatter handling
-
-MkDocs Material reads frontmatter natively. The adapter does **not** rewrite frontmatter — every field from [[contract]] is either consumed by Material or silently ignored:
-
-| Page field | MkDocs Material behavior |
-|---|---|
-| `title` | Sets page `<title>` and nav label |
-| `description` | Rendered as `<meta name="description">` |
-| `section` | Unused at render time (the adapter uses it to build `nav:`) |
-| `order` | Unused at render time (the adapter uses it to build `nav:`) |
-| `status` | Surfaced via the `mkdocs-material` `status` plugin if enabled; otherwise ignored |
-| `since` | Ignored by Material; surfaced in custom themes |
-| `updated` | Ignored by Material; doctor still validates freshness |
-
-### Local preview
+### Local Development & Build
 
 ```bash
+# Install dependencies
 pip install mkdocs mkdocs-material
-mkdocs serve                      # http://127.0.0.1:8000
+
+# Live reload development server (http://127.0.0.1:8000)
+mkdocs serve
+
+# Compile static HTML/CSS to _site/
+mkdocs build --strict --site-dir _site
 ```
 
-### Adapter defaults
+---
 
-- `theme.name: material` if `renderers.mkdocs.theme` not declared
-- `plugins: [search]` always included; user plugins appended
-- No `palette` if not declared (Material default light scheme)
+## 4. Docusaurus (v3+) Workflow
 
-## Docusaurus mapping
+### Generated `package.json`
 
-### `docs.yaml` → `docusaurus.config.js` + `sidebars.js`
+```json
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "docusaurus": "docusaurus",
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.0.0",
+    "@docusaurus/preset-classic": "^3.0.0",
+    "clsx": "^2.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}
+```
 
-Docusaurus splits config across two files. The adapter writes both.
+### Generated `docusaurus.config.js`
 
-#### `docusaurus.config.js`
-
-| `docs.yaml` source | `docusaurus.config.js` target |
-|---|---|
-| `site.name` | `title` |
-| `site.tagline` | `tagline` |
-| `site.base_url` | `url` + `baseUrl` (parsed) |
-| `renderers.docusaurus.preset` | `presets: [['classic', {...}]]` (default `classic`) |
-| `renderers.docusaurus.organizationName` | `organizationName` |
-| `renderers.docusaurus.projectName` | `projectName` |
-| `renderers.docusaurus.themeConfig` | `themeConfig` (deep-merged with adapter defaults) |
-
-#### `sidebars.js`
-
-| `docs.yaml` source | `sidebars.js` target |
-|---|---|
-| `sections[*]` (sorted by `order`) | one `category` entry per section |
-| `sections[*].title` | `category.label` |
-| `sections[*].pages[*]` | `category.items[]` — doc IDs (`<section>/<page>`) |
-| `extras[*]` | top-level doc IDs in the sidebar array |
-
-### Generated files (excerpt)
-
-`docusaurus.config.js`:
 ```javascript
-// Generated by pageworks export docusaurus — edits will be preserved unless --force.
+// Generated by pageworks export docusaurus
 module.exports = {
-  title: 'MyProject',
-  tagline: 'AI-native operational workspace',
-  url: 'https://alexsmedile.github.io',
-  baseUrl: '/myproject/',
-  organizationName: 'alexsmedile',
-  projectName: 'myproject',
+  title: 'Platform Docs',
+  tagline: 'Technical documentation',
+  url: 'https://org.github.io',
+  baseUrl: '/repo/',
+  onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
+  favicon: 'img/favicon.ico',
+  organizationName: 'org',
+  projectName: 'repo',
+  trailingSlash: false,
   presets: [
     ['classic', {
       docs: {
         sidebarPath: require.resolve('./sidebars.js'),
-        editUrl: 'https://github.com/example/myproject/edit/main/',
+        routeBasePath: '/', // Serve docs at root
       },
-      theme: { customCss: require.resolve('./src/css/custom.css') },
+      theme: {
+        customCss: require.resolve('./src/css/custom.css'),
+      },
     }],
   ],
-  themeConfig: {
-    navbar: { title: 'MyProject', logo: { src: 'img/logo.svg' } },
-    colorMode: { defaultMode: 'dark' },
-  },
 };
 ```
 
-`sidebars.js`:
+### Generated `sidebars.js`
+
 ```javascript
-// Generated by pageworks export docusaurus — edits will be preserved unless --force.
+// Generated by pageworks export docusaurus
 module.exports = {
   docs: [
     'index',
@@ -213,68 +179,70 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Reference',
-      items: ['reference/commands', 'reference/configuration'],
+      label: 'Architecture & System Design',
+      items: ['architecture/overview'],
     },
-    'changelog',
   ],
 };
 ```
 
-### Page frontmatter handling
-
-Docusaurus uses its own frontmatter vocabulary. The adapter writes pages **as-is** — Docusaurus reads what it understands and ignores the rest. Field translation:
-
-| Page field ([[contract]]) | Docusaurus equivalent | Adapter action |
-|---|---|---|
-| `title` | `title` | Used directly — same name |
-| `description` | `description` | Used directly — same name |
-| `section` | (none — sidebar position derives from `sidebars.js`) | Consumed by adapter to build sidebar, not written to page |
-| `order` | `sidebar_position` | Consumed by adapter (sidebar order wins); not auto-translated to per-page |
-| `status` | (none) | Ignored by Docusaurus |
-| `since` | (none) | Ignored by Docusaurus |
-| `updated` | (none — Docusaurus uses git mtime) | Ignored by Docusaurus; doctor still validates freshness |
-
-The adapter **does not rewrite page frontmatter** — pages stay portable between renderers. Renderer-specific frontmatter (e.g., `slug:`, `sidebar_label:`) is the user's escape hatch.
-
-### Local preview
+### Local Development & Build
 
 ```bash
-npx create-docusaurus@latest --skip-install .docusaurus-temp classic
-# (or scaffold once and reuse)
+# Install dependencies
 npm install
-npx docusaurus start              # http://localhost:3000
+
+# Start development server with Fast Refresh (http://localhost:3000)
+npm start
+
+# Compile static production build to build/
+npm run build
 ```
 
-### Adapter defaults
+---
 
-- `presets[0]` = `classic`
-- `themeConfig.colorMode.defaultMode` = `light` (override via `renderers.docusaurus.themeConfig`)
-- No `customCss` reference unless `src/css/custom.css` exists at write time
+## 5. Docker & Containerized Hosting
 
-### Docusaurus escape hatches
+For self-hosted, air-gapped, or internal corporate networks, Pageworks exports Docker support:
 
-Generated `sidebars.js` is regenerated on every `docs export docusaurus`. To pin a manual edit, add the magic comment as the first line:
+### MkDocs Live Preview & Build (`Dockerfile`)
 
-```javascript
-// pageworks: do-not-overwrite
+```dockerfile
+FROM squidfunk/mkdocs-material:latest
+WORKDIR /docs
+COPY . .
+EXPOSE 8000
+ENTRYPOINT ["mkdocs"]
+CMD ["serve", "--dev-addr=0.0.0.0:8000"]
 ```
 
-When this line is present, `pageworks export` skips the file even with `--force`, and reports `pinned (manual)`.
-
-## GitHub Pages deploy workflow
-
-Both adapters write `.github/workflows/docs.yml` (idempotent — skipped if present unless `--force`). The same workflow file serves both renderers via job selection.
-
-### MkDocs workflow
+### Static Production Hosting with Caddy/Nginx (`docker-compose.yml`)
 
 ```yaml
-# Generated by pageworks export mkdocs
-name: Deploy docs (MkDocs)
+version: '3.8'
+services:
+  docs:
+    image: caddy:2-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./_site:/usr/share/caddy:ro
+    restart: unless-stopped
+```
+
+---
+
+## 6. GitHub Actions Deployment Workflow
+
+Both adapters generate `.github/workflows/docs.yml` configured for GitHub Pages artifact deployment.
+
+```yaml
+# Generated by pageworks export
+name: Deploy documentation
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'mkdocs.yml', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'mkdocs.yml', 'docusaurus.config.js', 'sidebars.js', '.github/workflows/docs.yml']
   workflow_dispatch:
 
 permissions:
@@ -310,106 +278,3 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 ```
-
-### Docusaurus workflow
-
-```yaml
-# Generated by pageworks export docusaurus
-name: Deploy docs (Docusaurus)
-on:
-  push:
-    branches: [main]
-    paths: ['docs/**', 'docusaurus.config.js', 'sidebars.js', '.github/workflows/docs.yml']
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm ci
-      - run: npx docusaurus build
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: build
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-```
-
-### Post-export checklist (printed by CLI)
-
-After `docs export` writes the workflow, the CLI prints:
-
-```
-Generated:
-  ./mkdocs.yml
-  ./.github/workflows/docs.yml
-
-Next steps:
-  1. Settings → Pages → Source = GitHub Actions
-  2. Commit + push to main — workflow runs automatically
-  3. Site live at: https://<user>.github.io/<repo>/
-```
-
-## Other hosting targets
-
-The adapter ships only the GitHub Pages workflow. For other targets, copy from the renderer's own docs:
-
-| Target | MkDocs | Docusaurus |
-|---|---|---|
-| **Vercel** | Build command: `pip install mkdocs mkdocs-material && mkdocs build -d _site`, output: `_site` | Auto-detected; no config needed |
-| **Cloudflare Pages** | Build: `pip install mkdocs mkdocs-material && mkdocs build -d _site`, output: `_site` | Build: `npm run build`, output: `build` |
-| **Netlify** | `netlify.toml` with `command = "mkdocs build"`, `publish = "site"` | `netlify.toml` with `command = "npm run build"`, `publish = "build"` |
-
-These are not generated by `docs export`. Add them yourself or open a PR.
-
-## Idempotency rules
-
-| Re-run behavior | Default | `--force` |
-|---|---|---|
-| Existing renderer config (e.g. `mkdocs.yml`) | Skipped, report `skipped (exists)` | Overwritten |
-| Existing `.github/workflows/docs.yml` | Skipped, report `skipped (exists)` | Overwritten |
-| File with `// pageworks: do-not-overwrite` first line | Skipped, report `pinned (manual)` | **Still skipped** |
-| Missing target file | Written, report `created` | Written, report `created` |
-
-Exit 0 on all of the above. Non-zero only on actual failure (missing `docs.yaml`, malformed `renderers:` block, write permission denied).
-
-## Contributing a renderer
-
-Adding Mintlify, Fumadocs, or another renderer is welcome. The adapter contract:
-
-1. **Read** `docs/docs.yaml` (via the same loader used by `docs status`)
-2. **Read** optional `renderers.<your-renderer>` block for renderer-specific hints
-3. **Write** the renderer's config file(s) at the conventional location
-4. **Optionally write** a GitHub Pages workflow under `.github/workflows/docs.yml` (only if no workflow exists for any renderer yet — avoid overwrites between adapters)
-5. **Respect** `--force` and the `// pageworks: do-not-overwrite` magic comment
-6. **Print** the post-export checklist (generated files + hosting setup hint)
-
-Add a section to this reference doc with mapping tables matching the structure above. Open a PR against [alexsmedile/pageworks](https://github.com/alexsmedile/pageworks).
-
-## Anti-patterns
-
-- **Adapter that mutates `docs/*.md`** — the adapter reads, never rewrites pages. Page frontmatter stays portable between renderers.
-- **Adapter that owns the build pipeline** — pageworks writes config; the renderer's own tooling builds. No built-in `mkdocs build` invocation, no bundled Node/Python.
-- **Renderer-specific schema leakage into `docs.yaml` core fields** — anything renderer-specific belongs under `renderers.<name>`, never at `docs.yaml` root.
-- **Multiple workflows fighting over `.github/workflows/docs.yml`** — only one adapter's workflow can win per repo. The adapter prints a clear error if the existing workflow targets a different renderer and `--force` is required.

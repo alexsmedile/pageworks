@@ -1,10 +1,11 @@
 ---
-title: <Tutorial title — verb-led, e.g., "Build your first X">
-description: <One sentence — what the reader will have at the end>
+title: <Tutorial title — verb-led, e.g., "Build your first microservice">
+description: <One sentence — what the reader will have running at the end>
 section: <section-id>
 type: tutorial
 status: draft
-since: <version>
+owner: <team-or-role — e.g., "@onboarding-guild">
+last_reviewed: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
 prerequisites:
   - <Skill, tool, or knowledge required>
@@ -13,44 +14,62 @@ estimated_time: <e.g., 15 minutes>
 
 # <Tutorial title>
 
-<One-paragraph framing — what we're building together and why someone would care. Avoid jargon; write to a first-time reader.>
+<One-paragraph framing — what we are building together and why it matters. Avoid jargon; write to a first-time onboarder.>
 
-## What you'll have at the end
+## What you will have at the end
 
-<Concrete artifact — a running app, a deployed page, a working pipeline. Show the end state.>
+<Concrete artifact — a running local microservice, a deployed endpoint, a verified connection. Show the exact end state.>
 
 ## Before you start
 
-<Prerequisites in plain language. Link to install pages, not version pickers.>
-
-## Step 1 — <First concrete action>
-
-<Imperative voice. One step does one thing. Show the command, then show the output the reader should see.>
+<Prerequisites in plain language with exact commands to verify them.>
 
 ```bash
-<command>
+docker --version
+node --version
+```
+
+## Step 1 — <Action-oriented first step — e.g., 'Clone and configure the repository'>
+
+<Imperative voice. One step does one concrete thing. Show the command, then show the expected output the reader will see.>
+
+```bash
+git clone git@github.com:org/<repo>.git
+cd <repo>
+cp .env.example .env
 ```
 
 ```
-<expected output>
+✓ Cloned repository
+✓ Environment file initialized
 ```
 
-If you see <common error>, <one-line fix or link>.
+If you see `<COMMON_ERROR>`, `<one-line fix or link>`.
 
-## Step 2 — <Next action>
+## Step 2 — <Action-oriented next step — e.g., 'Launch local dependencies'>
 
-<Continue. Steps build on each other; each step is short.>
+```bash
+docker compose up -d
+```
 
-## Step 3 — <Verify it works>
+## Step 3 — <Action-oriented verification step — e.g., 'Verify the running service'>
 
-<End every tutorial with a verification step the reader runs themselves.>
+<End every tutorial with a concrete verification command the reader executes themselves.>
+
+```bash
+curl -f http://localhost:8080/healthz
+```
+
+```json
+{"status":"healthy","version":"1.0.0"}
+```
 
 ## What just happened
 
-<2–4 sentences explaining the mental model. This is the only place a tutorial pauses to explain — and it's at the end, after success.>
+<2–4 sentences explaining the underlying mental model. This is the only place a tutorial pauses to explain — and it is at the end, after tangible success.>
 
 ## Next
 
-- <Link to a how-to for a related task>
-- <Link to a reference page for what we just used>
-- <Link to an explanation page for the concept behind it>
+- [How-to: Deploy to Staging](../operations/deploy-staging.md)
+- [Reference: Configuration Variables](../reference/config-env.md)
+- [Explanation: Architecture Overview](../architecture/system-overview.md)

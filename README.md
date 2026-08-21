@@ -52,28 +52,33 @@ Then in your AI agent of choice:
 
 ## Pairing with spectacular
 
-[spectacular](https://github.com/alexsmedile/spectacular) is pageworks's sibling — it owns the *internal* workspace (`.spectacular/`: PRDs, specs, plans, requests). Pageworks owns the *external* workspace (`docs/`).
+[spectacular](https://github.com/alexsmedile/spectacular) is pageworks's sibling — it owns the *internal* workspace (`.spectacular/`: Anchors, Contracts, Missions, Decisions). Pageworks owns the *external* workspace (`docs/`).
 
-Both are designed to coexist:
+Both are designed to seamlessly coexist:
 
-- Spectacular discovers pageworks via `spectacular doctor docs` (discovery-only)
-- After archiving a spec change, spectacular prompts you to update docs — handed off to pageworks
-- Pageworks runs perfectly fine without spectacular too
+- Spectacular discovers pageworks and delegates public-doc authoring and maintenance to it.
+- After completing a Mission or amending a Contract that alters project behavior, the session prompts you to reconcile docs with `pageworks audit`.
+- Pageworks runs completely standalone without spectacular too.
 
-If you have spectacular installed at v1.1.x or earlier, its built-in `docs init|export|doctor` commands still work but are deprecated as of spectacular v1.2.0 — pageworks supersedes them. They'll be removed in spectacular v2.0.0.
+## The 6 Core Classes of Pages (Formats)
 
-## Page-type templates (Diátaxis)
+| Class | Format / Intent | Example | Canonical Template |
+|---|---|---|---|
+| **1. Getting Started / Tutorials** | Step-by-step onboarding walkthroughs (zero to running). | `getting-started/local-dev-setup.md` | `tutorial.md.tmpl` |
+| **2. How-To Guides (Runbooks)** | Practical, goal-oriented recipes for operational tasks or troubleshooting. | `operations/rotate-secrets.md` | `how-to.md.tmpl` / `runbook.md.tmpl` |
+| **3. Architecture Decision Records (ADRs)** | Short, immutable logs recording technical choices, alternatives, and trade-offs. | `architecture/0004-use-postgres-for-events.md` | `adr.md.tmpl` |
+| **4. Technical Reference Specs** | Pure factual data: API contracts, data schemas, CLI flags, config variables. | `reference/payment-api-v2.md` | `reference.md.tmpl` |
+| **5. Service Catalog Pages** | "One-pagers" for services: ownership, repos, URLs, SLOs, health checks. | `services/auth-service.md` | `service-catalog.md.tmpl` |
+| **6. Incident Postmortems** | Outage retrospectives analyzing root cause (5 Whys), impact, timeline, action items. | `operations/2026-05-auth-outage.md` | `incident-postmortem.md.tmpl` |
 
-Pageworks scaffolds and reviews pages against the [Diátaxis](https://diataxis.fr/) framework:
+## The 6 Main Topic Categories (Information Architecture)
 
-| Quadrant | Purpose | When to write one |
-|---|---|---|
-| Tutorial | Learning by doing | Onboarding a new user |
-| How-to | Solve a specific problem | Recipe-style task guides |
-| Reference | Look up exact details | API, CLI, schema docs |
-| Explanation | Understand the why | Architecture decisions, mental models |
-
-`pageworks new <page>` asks which quadrant; the right template is used.
+1. **Getting Started & Onboarding** — Prerequisites, repo setup, permissions, hello-world deploy.
+2. **Architecture & System Design** — High-level topology (Mermaid/C4), shared infrastructure, ADR log.
+3. **Services & Components** — Service Catalog one-pagers, dependency maps, telemetry dashboards.
+4. **Operations & Reliability** — Runbooks, deployment SOPs, incident triage, disaster recovery drills.
+5. **API & Data Reference** — OpenAPI / GraphQL schemas, event bus schemas, CLI flags.
+6. **Standards & Governance** — Coding standards, security compliance, Definition of Done, PR checklists.
 
 ## Renderers
 

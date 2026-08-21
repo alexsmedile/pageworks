@@ -1,0 +1,83 @@
+---
+title: "Runbook: <Task or Incident Name — e.g., 'Rotate Database Credentials'>"
+description: "<One sentence — operational problem solved or SOP executed>"
+section: operations
+type: runbook # or how-to
+status: stable
+owner: <team-or-role — e.g., "@sre-core">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+severity: <Sev1 / Sev2 / Sev3 / Routine SOP>
+---
+
+# Runbook: <Task or Incident Name>
+
+<One-sentence summary: when to use this runbook, who is authorized to execute it, and the expected operational outcome.>
+
+## Alert Triggers & Symptoms
+
+- **Alert Name**: `<PagerDuty / Datadog Alert Rule Name>`
+- **Severity**: `<Sev 1 / Sev 2 / Warning>`
+- **Symptom**: `<Observable error spike, high latency, queue backlog, or failed health check>`
+
+## Escalation Matrix
+
+| Role | Primary Contact | Escalation SLA |
+|---|---|---|
+| **Primary On-Call** | `#oncall-platform` / `@oncall-lead` | 15 minutes |
+| **Secondary / Tech Lead** | `@tech-lead` | 30 minutes |
+| **Engineering Manager** | `@eng-manager` | 60 minutes |
+
+## Prerequisites
+
+- Access to Kubernetes cluster: `kubectl config use-context prod-cluster`
+- Secret vault token / CLI initialized: `vault login`
+
+---
+
+## Step-by-Step Triage & Mitigation
+
+### Step 1 — Inspect System Telemetry
+
+Check current error rates and active container pods:
+
+```bash
+kubectl get pods -n <namespace> -l app=<service-name>
+kubectl logs -n <namespace> -l app=<service-name> --tail=100 -f
+```
+
+### Step 2 — Execute Mitigation Action
+
+```bash
+# Set placeholder variables
+export SERVICE_NAME="<SERVICE_NAME>"
+export NEW_SECRET="<NEW_SECRET_VALUE>"
+
+# Run the remediation command
+kubectl rollout restart deployment/<SERVICE_NAME> -n <namespace>
+```
+
+### Step 3 — Verify Recovery
+
+Check that the deployment achieves ready status and error rates drop:
+
+```bash
+kubectl rollout status deployment/<SERVICE_NAME> -n <namespace>
+curl -f https://<service>.internal/healthz
+```
+
+---
+
+## Rollback Plan
+
+If the mitigation fails or symptoms worsen:
+
+```bash
+kubectl rollout undo deployment/<SERVICE_NAME> -n <namespace>
+```
+
+## Post-Incident Actions
+
+1. Post an update in `#incidents` confirming resolution.
+2. File a follow-up ticket in the team board for root-cause analysis.
+3. If this was a Sev1/Sev2 incident, draft an [Incident Postmortem](../postmortems/<DATE>-<INCIDENT_SLUG>.md).

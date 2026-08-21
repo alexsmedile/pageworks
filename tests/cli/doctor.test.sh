@@ -13,6 +13,10 @@
 #   9. renderers: as scalar → error
 #  10. renderers: as list → error
 #  11. Page missing type: → info (Diátaxis recommendation)
+#  12. Page not reviewed in > 180 days → warning (stale)
+#  13. Broken internal markdown link → error
+#  14. Directory nesting > 3 levels deep → error
+#  15. Recognized 6 Core Classes pass clean
 
 set -u
 
@@ -255,7 +259,7 @@ title: Install
 description: Install the thing.
 section: getting-started
 status: draft
-updated: 2026-05-23
+updated: 2026-08-22
 ---
 # Install
 EOF
@@ -263,6 +267,107 @@ EOF
   local output
   output=$(run_cli "$dir" doctor 2>&1)
   assert_contains "$output" "missing 'type:' frontmatter"
+
+  rm -rf "$dir"
+}
+
+scenario_12_stale_content_warning() {
+  echo "Scenario 12: page not reviewed in > 180 days → warning (stale)"
+  local dir="/tmp/pageworks-doctor-test-12"
+  setup_docs "$dir"
+
+  cat > "$dir/docs/getting-started/install.md" <<'EOF'
+---
+title: Install
+description: Install the thing.
+section: getting-started
+type: tutorial
+status: stable
+owner: "@platform-core"
+last_reviewed: 2025-01-01
+updated: 2025-01-01
+---
+# Install
+EOF
+
+  local output
+  output=$(run_cli "$dir" doctor 2>&1)
+  assert_contains "$output" "not been reviewed in > 180 days"
+
+  rm -rf "$dir"
+}
+
+scenario_13_broken_internal_link() {
+  echo "Scenario 13: broken internal markdown link → error"
+  local dir="/tmp/pageworks-doctor-test-13"
+  setup_docs "$dir"
+
+  cat >> "$dir/docs/getting-started/install.md" <<'EOF'
+
+See [Missing Guide](nonexistent-guide.md) for details.
+EOF
+
+  local output exit_code=0
+  if output=$(run_cli "$dir" doctor 2>&1); then exit_code=0; else exit_code=$?; fi
+
+  if [[ $exit_code -ne 0 ]]; then pass_count=$((pass_count + 1))
+  else echo "    ✗ expected non-zero exit"; fail_count=$((fail_count + 1)); fi
+  assert_contains "$output" "broken internal link to 'nonexistent-guide.md'"
+
+  rm -rf "$dir"
+}
+
+scenario_14_deep_nesting_error() {
+  echo "Scenario 14: directory nesting > 3 levels deep → error"
+  local dir="/tmp/pageworks-doctor-test-14"
+  setup_docs "$dir"
+
+  mkdir -p "$dir/docs/services/sub/nested"
+  cat > "$dir/docs/services/sub/nested/deep.md" <<'EOF'
+---
+title: Deep Page
+description: Nested too deep.
+section: services
+type: reference
+status: draft
+updated: 2026-08-22
+---
+# Deep
+EOF
+
+  local output exit_code=0
+  if output=$(run_cli "$dir" doctor 2>&1); then exit_code=0; else exit_code=$?; fi
+
+  if [[ $exit_code -ne 0 ]]; then pass_count=$((pass_count + 1))
+  else echo "    ✗ expected non-zero exit"; fail_count=$((fail_count + 1)); fi
+  assert_contains "$output" "depth exceeds 3 levels"
+
+  rm -rf "$dir"
+}
+
+scenario_15_six_core_classes_valid() {
+  echo "Scenario 15: recognized 6 Core Classes pass clean"
+  local dir="/tmp/pageworks-doctor-test-15"
+  setup_docs "$dir"
+
+  for class_name in adr service-catalog runbook postmortem; do
+    cat > "$dir/docs/getting-started/quickstart.md" <<EOF
+---
+title: Quickstart
+description: Quickstart guide.
+section: getting-started
+type: ${class_name}
+status: stable
+owner: "@platform-core"
+last_reviewed: 2026-08-22
+updated: 2026-08-22
+---
+# Quickstart
+EOF
+    local output
+    output=$(run_cli "$dir" doctor 2>&1)
+    assert_not_contains "$output" "unrecognized type"
+  done
 
   rm -rf "$dir"
 }
@@ -279,6 +384,10 @@ scenario_8_renderers_unknown
 scenario_9_renderers_scalar
 scenario_10_renderers_list
 scenario_11_missing_type_info
+scenario_12_stale_content_warning
+scenario_13_broken_internal_link
+scenario_14_deep_nesting_error
+scenario_15_six_core_classes_valid
 
 echo ""
 echo "Results: ${pass_count} passed, ${fail_count} failed"

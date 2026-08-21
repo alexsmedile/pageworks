@@ -1,0 +1,47 @@
+site:
+  name: pageworks
+  tagline: "Write docs that don't rot — Dual-Dimension Software Wiki & Renderer Pipelines"
+  base_url: https://alexsmedile.github.io/pageworks/
+
+sections:
+  - id: getting-started
+    title: Getting Started & Onboarding
+    order: 1
+    pages: [install, quickstart, concepts]
+
+  - id: architecture
+    title: Architecture & System Design
+    order: 2
+    pages: [overview, 0001-spectacular-v2-migration]
+
+  - id: services
+    title: Services & Components
+    order: 3
+    pages: [cli, skill-engine]
+
+  - id: operations
+    title: Operations & Reliability
+    order: 4
+    pages: [export-runbook, maintenance-audit]
+
+  - id: reference
+    title: API & Data Reference
+    order: 5
+    pages: [cli-reference, manifest-schema, frontmatter-spec]
+
+  - id: standards
+    title: Standards & Governance
+    order: 6
+    pages: [prose-guidelines, review-checklist]
+
+renderers:
+  mkdocs:
+    theme: material
+    primary: indigo
+    scheme: slate
+    repo_url: https://github.com/alexsmedile/pageworks
+    edit_uri: edit/main/docs/
+  docusaurus:
+    preset: classic
+    organizationName: alexsmedile
+    projectName: pageworks

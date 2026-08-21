@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ── constants ────────────────────────────────────────────────────────────────
-PAGEWORKS_VERSION="0.1.0"
+PAGEWORKS_VERSION="0.2.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TODAY="$(date +%Y-%m-%d)"
 
@@ -58,28 +58,37 @@ write_if_missing() {
 # ── usage ────────────────────────────────────────────────────────────────────
 top_usage() {
   cat <<EOF
-pageworks v${PAGEWORKS_VERSION} — public-facing documentation
+pageworks v${PAGEWORKS_VERSION} — public-facing software & platform documentation
 
 Usage: pageworks <command> [options]
 
 CLI verbs (mutate docs/):
-  init [--minimal] [--name <slug>]    Scaffold docs/ + docs.yaml + index.md + default sections
-                                      --minimal: docs.yaml + index.md only
+  init [opts]                         Scaffold docs/ + docs.yaml + index.md + sections
+                                       --minimal           docs.yaml + index.md only
+                                       --preset <name>     default | platform | minimal
+                                       --platform          Alias for --preset platform (6 categories)
+                                       --name <slug>       Override project name
   export <renderer> [opts]            Generate renderer config from docs.yaml
-                                      Renderers: mkdocs | docusaurus
-                                      Options:
-                                        --out <path>   Override default output location
-                                        --force        Overwrite existing files
-                                        --no-workflow  Skip GitHub Pages workflow
-  doctor [--fix]                      Validate docs/ — schema, frontmatter, links
-                                      --fix applies mechanical repairs
+                                       Renderers: mkdocs | docusaurus
+                                       Options:
+                                         --out <path>   Override default output location
+                                         --force        Overwrite existing files
+                                         --no-workflow  Skip GitHub Pages workflow
+  doctor [--fix]                      Validate docs/ — schema, frontmatter, links, freshness, depth
+                                       --fix applies mechanical repairs
 
 Skill verbs (run via /pageworks in your AI agent):
-  new <page>                          Scaffold a page (asks for type + section)
+  new <page>                          Scaffold a page (asks for class format + section)
   new --section <name>                Declare a new section in docs.yaml
-  review                              Quality gate — type fit, prose, structure
-  status                              Briefing of docs/ state
-  audit                               Drift detection — stale, broken links, sync
+  review                              Quality gate — type fit, prose, structure, freshness
+  status                              Briefing of docs/ state & topic inventory
+  audit                               Drift detection — 180-day stale pages, broken links, sync
+
+The 6 Core Classes of Pages:
+  tutorial | how-to | adr | reference | service-catalog | postmortem (plus explanation)
+
+The 6 Main Topic Categories:
+  getting-started | architecture | services | operations | reference | standards
 
 Top-level:
   -v, --version          Print version and exit
@@ -92,10 +101,14 @@ EOF
 # ── docs init ────────────────────────────────────────────────────────────────
 cmd_init() {
   local minimal=false
+  local preset="default"
   local project_name=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --minimal) minimal=true; shift ;;
+      --minimal) minimal=true; preset="minimal"; shift ;;
+      --platform) preset="platform"; shift ;;
+      --preset)  require_value "--preset" "${2:-}"; preset="$2"; shift 2 ;;
+      --preset=*) preset="${1#--preset=}"; shift ;;
       --name)    require_value "--name" "${2:-}"; project_name="$2"; shift 2 ;;
       --name=*)  project_name="${1#--name=}"; shift ;;
       -h|--help) top_usage; exit 0 ;;
@@ -103,6 +116,7 @@ cmd_init() {
     esac
   done
 
+  [[ "$preset" == "minimal" ]] && minimal=true
   [[ -z "$project_name" ]] && project_name="$(slug_from_dir)"
 
   echo "pageworks init"
@@ -115,7 +129,63 @@ cmd_init() {
     skip "docs/ (already exists)"
   fi
 
-  write_if_missing "docs/docs.yaml" "site:
+  local manifest_content
+  if [[ "$preset" == "platform" ]]; then
+    manifest_content="site:
+  name: ${project_name}
+  tagline: \"Software & platform documentation\"
+  # base_url: https://example.com   # optional — used by renderer adapters
+
+sections:
+  - id: getting-started
+    title: Getting Started
+    order: 1
+    pages: [install, quickstart, concepts]
+
+  - id: architecture
+    title: Architecture & System Design
+    order: 2
+    pages: []
+
+  - id: services
+    title: Services & Components
+    order: 3
+    pages: []
+
+  - id: operations
+    title: Operations & Reliability
+    order: 4
+    pages: []
+
+  - id: reference
+    title: API & Data Reference
+    order: 5
+    pages: []
+
+  - id: standards
+    title: Standards & Governance
+    order: 6
+    pages: []
+
+# Optional top-level entries with no section grouping
+# extras:
+#   - changelog       # symlinks to ../CHANGELOG.md
+#   - troubleshooting
+
+# Optional per-renderer hints consumed by 'pageworks export <renderer>'
+# renderers:
+#   mkdocs:
+#     theme: material
+#     primary: indigo
+#     repo_url: https://github.com/org/${project_name}
+#     edit_uri: edit/main/docs/
+#   docusaurus:
+#     preset: classic
+#     organizationName: org
+#     projectName: ${project_name}
+"
+  else
+    manifest_content="site:
   name: ${project_name}
   tagline: \"\"
   # base_url: https://example.com   # optional — used by renderer adapters
@@ -155,20 +225,42 @@ sections:
 #     organizationName: org
 #     projectName: ${project_name}
 "
+  fi
+
+  write_if_missing "docs/docs.yaml" "$manifest_content"
 
   write_if_missing "docs/index.md" "---
 title: ${project_name}
-description: User-facing documentation for ${project_name}.
+description: User-facing software & platform documentation for ${project_name}.
 section: \"\"
 type: explanation
 order: 0
 status: draft
+owner: \"@platform-core\"
+last_reviewed: ${TODAY}
 updated: ${TODAY}
 ---
 
 # ${project_name}
 
 Welcome to the documentation. Start here, then drill into the sections below.
+
+## System Overview & Ownership
+
+| Detail | Value |
+|---|---|
+| **Owning Team** | @platform-core |
+| **Slack Channel** | #dev-platform |
+| **Source Repository** | [github.com/org/${project_name}](https://github.com/org/${project_name}) |
+
+## Architecture Topology
+
+\`\`\`mermaid
+flowchart TD
+    Client[\"Client Applications\"] --> Gateway[\"API Gateway\"]
+    Gateway --> Services[\"Core Services\"]
+    Services --> DB[(\"Primary Datastore\")]
+\`\`\`
 
 ## Sections
 
@@ -195,6 +287,8 @@ description: ${desc}
 section: ${section}
 type: ${type}
 status: draft
+owner: \"@platform-core\"
+last_reviewed: ${TODAY}
 updated: ${TODAY}
 ---
 
@@ -208,7 +302,12 @@ updated: ${TODAY}
 "
   done
 
-  for d in guides reference; do
+  local extra_dirs="guides reference"
+  if [[ "$preset" == "platform" ]]; then
+    extra_dirs="architecture services operations reference standards"
+  fi
+
+  for d in $extra_dirs; do
     if [[ ! -d "docs/$d" ]]; then
       mkdir -p "docs/$d"
       touch "docs/$d/.gitkeep"
@@ -226,7 +325,7 @@ updated: ${TODAY}
   echo "  pageworks export mkdocs       # generate mkdocs.yml + GitHub Pages workflow"
 }
 
-# ── docs.yaml parsers (lifted from spectacular v1.1.0) ──────────────────────
+# ── docs.yaml parsers ────────────────────────────────────────────────────────
 docs_yaml_scalar() {
   local manifest="$1" path="$2"
   local root="${path%%.*}" key="${path#*.}"
@@ -420,15 +519,70 @@ site_name: ${site_name:-Documentation}
 theme:
   name: ${theme}
 "
+  local palette_content=""
   if [[ -n "$palette_scheme" || -n "$palette_primary" ]]; then
-    content+="  palette:
+    palette_content="  palette:
 "
-    [[ -n "$palette_scheme" ]] && content+="    - scheme: ${palette_scheme}
+    [[ -n "$palette_scheme" ]] && palette_content+="    - scheme: ${palette_scheme}
 "
-    [[ -n "$palette_primary" ]] && content+="      primary: ${palette_primary}
+    [[ -n "$palette_primary" ]] && palette_content+="      primary: ${palette_primary}
+"
+  else
+    palette_content="  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
 "
   fi
-  content+="
+
+  local content="# Generated by pageworks export mkdocs — edits will be preserved unless --force.
+# To pin manual edits, add as the first line: # pageworks: do-not-overwrite
+site_name: ${site_name:-Documentation}
+"
+  [[ -n "$site_tagline" ]] && content+="site_description: ${site_tagline}
+"
+  [[ -n "$site_url" ]] && content+="site_url: ${site_url}
+"
+  [[ -n "$repo_url" ]] && content+="repo_url: ${repo_url}
+"
+  [[ -n "$edit_uri" ]] && content+="edit_uri: ${edit_uri}
+"
+  content+="docs_dir: docs
+
+theme:
+  name: ${theme}
+${palette_content}  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
 plugins:
   - search
 
@@ -499,6 +653,8 @@ module.exports = {
   tagline: '${site_tagline//\'/\\\'}',
   url: '${du_url}',
   baseUrl: '${du_base}',
+  onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
 "
   [[ -n "$org_name" ]] && config_content+="  organizationName: '${org_name}',
 "
@@ -508,6 +664,10 @@ module.exports = {
     ['${preset}', {
       docs: {
         sidebarPath: require.resolve('./sidebars.js'),
+        routeBasePath: '/',
+      },
+      theme: {
+        customCss: require.resolve('./src/css/custom.css'),
       },
     }],
   ],
@@ -529,6 +689,41 @@ ${sidebar_items}  ],
 };
 "
   docs_write_adapter_file "$sidebars_file" "$sidebars_content"
+
+  local pkg_file="${out_dir%/}/package.json"
+  if [[ ! -f "$pkg_file" ]]; then
+    local pkg_content="{
+  \"name\": \"docs\",
+  \"version\": \"1.0.0\",
+  \"private\": true,
+  \"scripts\": {
+    \"docusaurus\": \"docusaurus\",
+    \"start\": \"docusaurus start\",
+    \"build\": \"docusaurus build\",
+    \"serve\": \"docusaurus serve\"
+  },
+  \"dependencies\": {
+    \"@docusaurus/core\": \"^3.0.0\",
+    \"@docusaurus/preset-classic\": \"^3.0.0\",
+    \"clsx\": \"^2.0.0\",
+    \"react\": \"^18.0.0\",
+    \"react-dom\": \"^18.0.0\"
+  }
+}
+"
+    docs_write_adapter_file "$pkg_file" "$pkg_content"
+  fi
+
+  local css_file="${out_dir%/}/src/css/custom.css"
+  if [[ ! -f "$css_file" ]]; then
+    local css_content="/* Generated by pageworks export docusaurus */
+:root {
+  --ifm-color-primary: #3578e5;
+  --ifm-color-primary-dark: #306cce;
+}
+"
+    docs_write_adapter_file "$css_file" "$css_content"
+  fi
 }
 
 # ── GitHub Pages workflow writer ──
@@ -872,8 +1067,17 @@ cmd_doctor() {
   done
   shopt -u nullglob
 
-  # Frontmatter validation
+  # Hierarchy depth check (max 3 levels: docs -> section -> page.md)
+  while IFS= read -r deep_file; do
+    [[ -z "$deep_file" ]] && continue
+    doctor_emit "error" "$deep_file" "folder hierarchy depth exceeds 3 levels (keep structure shallow)" \
+      "move to a flat section folder under docs/ and group in docs.yaml"
+  done < <(find "$docs_dir" -mindepth 3 -name "*.md" 2>/dev/null || true)
+
+  # Frontmatter & Content validation
   local required_fields="title description section status updated"
+  local valid_classes="tutorial how-to reference explanation adr service-catalog runbook postmortem"
+  
   shopt -s nullglob
   for page_file in "$docs_dir"/*.md "$docs_dir"/*/*.md; do
     [[ -f "$page_file" ]] || continue
@@ -882,18 +1086,84 @@ cmd_doctor() {
         "add proper frontmatter block"
       continue
     fi
+
     local fm
     fm=$(awk '/^---$/ { count++; if (count == 2) exit; next } count == 1' "$page_file")
+    
     for field in $required_fields; do
       if ! echo "$fm" | grep -qE "^${field}:"; then
         doctor_emit "error" "$page_file" "missing required frontmatter field: ${field}" \
           "add '${field}:' to frontmatter (or run 'pageworks doctor --fix')"
       fi
     done
-    # Info-level: type field is recommended
+
+    # Type field check (info if missing, warning if unknown)
     if ! echo "$fm" | grep -qE "^type:"; then
-      doctor_emit "info" "$page_file" "missing 'type:' frontmatter (Diátaxis: tutorial|how-to|reference|explanation)"
+      doctor_emit "info" "$page_file" "missing 'type:' frontmatter (Diátaxis / 6 Core Classes: tutorial|how-to|reference|explanation|adr|service-catalog|runbook|postmortem)"
+    else
+      local ptype
+      ptype=$(echo "$fm" | awk '/^type:/ { sub(/^type:[[:space:]]*/, ""); sub(/[[:space:]]*#.*$/, ""); gsub(/^["'\'']|["'\'']$/, ""); print; exit }')
+      if [[ -n "$ptype" ]] && ! in_list "$ptype" "$valid_classes"; then
+        doctor_emit "warning" "$page_file" "unrecognized type '${ptype}'" \
+          "use one of: ${valid_classes}"
+      fi
     fi
+
+    # 180-Day Stale Content Check
+    local last_rev
+    last_rev=$(echo "$fm" | awk '/^(last_reviewed|updated):/ { sub(/^[a-zA-Z_]+:[[:space:]]*/, ""); sub(/[[:space:]]*#.*$/, ""); gsub(/^["'\'']|["'\'']$/, ""); print; exit }')
+    if [[ -n "$last_rev" && "$last_rev" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+      local days_old
+      days_old=$(awk -v today="$TODAY" -v date="$last_rev" '
+        function to_days(ymd,  arr, y, m, d) {
+          split(ymd, arr, "-")
+          y = arr[1] + 0; m = arr[2] + 0; d = arr[3] + 0
+          if (m <= 2) { y -= 1; m += 12 }
+          return int(365.25 * y) + int(30.6001 * (m + 1)) + d
+        }
+        BEGIN { print to_days(today) - to_days(date) }
+      ')
+      if (( days_old > 180 )); then
+        doctor_emit "warning" "$page_file" "content has not been reviewed in > 180 days (${days_old} days old — stale)" \
+          "verify accuracy against current code and update 'last_reviewed: ${TODAY}' or run 'pageworks sync-ack'"
+      fi
+    fi
+
+    # Internal Markdown Link Check
+    local page_dir
+    page_dir="$(dirname "$page_file")"
+    local raw_links
+    raw_links=$(awk '
+      {
+        line = $0
+        while (match(line, /\[[^\]]*\]\(([^)#[:space:]]+)(#[^)]*)?\)/) > 0) {
+          matched = substr(line, RSTART, RLENGTH)
+          sub(/^\[[^\]]*\]\(/, "", matched)
+          sub(/\).*$/, "", matched)
+          sub(/#.*$/, "", matched)
+          sub(/\?.*$/, "", matched)
+          if (matched != "" && matched !~ /^(https?:|mailto:|ftp:|#|<)/) {
+            print matched
+          }
+          line = substr(line, RSTART + RLENGTH)
+        }
+      }
+    ' "$page_file")
+
+    while IFS= read -r link_target; do
+      [[ -z "$link_target" ]] && continue
+      local target_resolved
+      if [[ "$link_target" == /* ]]; then
+        target_resolved=".${link_target}"
+      else
+        target_resolved="${page_dir}/${link_target}"
+      fi
+      if [[ ! -e "$target_resolved" ]]; then
+        doctor_emit "error" "$page_file" "broken internal link to '${link_target}'" \
+          "ensure the target file exists or update the link URL"
+      fi
+    done <<< "$raw_links"
+
   done
   shopt -u nullglob
 
@@ -906,7 +1176,7 @@ cmd_doctor() {
 skill_verb_message() {
   local verb="$1" description="$2"
   cat >&2 <<EOF
-'pageworks ${verb}' is a skill verb — run it inside your AI agent (Claude Code, Codex).
+'pageworks ${verb}' is a skill verb — run it inside your AI agent (Claude Code, Codex, Antigravity).
 ${description}
 EOF
   exit 0
@@ -929,19 +1199,19 @@ main() {
     doctor) shift; cmd_doctor "$@" ;;
     new)
       shift
-      skill_verb_message "new" "Scaffolds a page (asks for Diátaxis type + section + title)."
+      skill_verb_message "new" "Scaffolds a page (asks for 6 Core Classes format + section + title)."
       ;;
     review)
       shift
-      skill_verb_message "review" "Quality gate — type fit, prose, structure, freshness."
+      skill_verb_message "review" "Quality gate — format fit, prose patterns, structure, freshness."
       ;;
     status)
       shift
-      skill_verb_message "status" "Briefing of docs/ state — sections, page types, drafts, stale pages."
+      skill_verb_message "status" "Briefing of docs/ state — 6 topic categories, page classes, stale review alerts."
       ;;
     audit)
       shift
-      skill_verb_message "audit" "Drift detection — stale pages, broken links, sync-source gaps."
+      skill_verb_message "audit" "Drift detection — 180-day stale pages, broken links, spec-sync gaps."
       ;;
     *)
       die "Unknown command: '${subcmd}'.

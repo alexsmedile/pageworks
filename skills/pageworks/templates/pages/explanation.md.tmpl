@@ -1,39 +1,56 @@
 ---
-title: <Concept or decision — noun phrase, e.g., "Why pageworks doesn't render">
-description: <One sentence — the question this page answers>
+title: <Concept or decision — e.g., "Event-Driven Architecture Overview">
+description: <One sentence — the mental model or design decision explained>
 section: <section-id>
 type: explanation
 status: stable
-since: <version>
+owner: <team-or-role — e.g., "@architecture-guild">
+last_reviewed: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
 ---
 
-# <Concept or decision>
+# <Concept or Architecture Overview>
 
-<Opening: state the question or concept directly. Explanation pages exist because the reader wants to understand, not act. Reward the curiosity in the first paragraph.>
+<Opening paragraph: state the concept or architectural philosophy directly. Answer the curiosity and explain the 'why'.>
 
-## The short version
+## Executive Summary
 
-<2–4 sentences that capture the whole idea. Many readers stop here — make those sentences earn their place.>
+<2–4 sentences capturing the core concept, key benefits, and high-level trade-offs.>
 
-## Background
+## System Topology & Data Flow
 
-<Why this question exists. What problem prompted the design, decision, or framing. Cite real constraints (performance, ergonomics, team dynamics) rather than abstract principles.>
+```mermaid
+flowchart TD
+    subgraph Ingestion Layer
+        API["API Gateway"] --> PubSub["Message Bus (Kafka)"]
+    end
+    subgraph Processing Layer
+        PubSub --> Worker1["Event Consumer A"]
+        PubSub --> Worker2["Event Consumer B"]
+    end
+    subgraph Persistence Layer
+        Worker1 --> DB[("Primary Database")]
+        Worker2 --> Cache[("Redis Cache")]
+    end
+```
 
-## How it works
+## Background & Problem Statement
 
-<The mechanism, the mental model, the trade-offs. Diagrams welcome. Use prose, not bullets, for the connective tissue — explanation is the only Diátaxis quadrant where flowing text beats lists.>
+<Why does this system look like this? What constraints (scale, cost, reliability, latency) drove this design over simpler alternatives?>
 
-## What this means in practice
+## Core Concepts & Mental Model
 
-<Concrete consequences. If a user understands this, what changes about how they use the system? What surprises does it remove?>
+<Explain the components and interactions using narrative prose. Connective tissue beats bullet points here.>
 
-## Trade-offs and alternatives
+## Trade-offs & Alternatives Considered
 
-<Honest accounting of what this approach gives up. Mention the alternatives considered, briefly, and why they weren't picked. Avoids "decision in a vacuum" energy.>
+| Approach | Benefits | Costs / Limitations | Verdict |
+|---|---|---|---|
+| **Event-Driven (Chosen)** | High decoupling, resilient async processing | Eventual consistency, operational complexity | **Selected for scalability** |
+| **Direct Synchronous RPC** | Simple mental model, immediate consistency | Cascading failures under load | Rejected |
 
-## Related
+## Related Documentation
 
-- <Link to a how-to that depends on this understanding>
-- <Link to a reference page for the API/CLI involved>
-- <Link to a deeper explanation if this is part of a chain>
+- [Getting Started: Deploying Consumers](../getting-started/quickstart.md)
+- [Architecture Decision: ADR 0004](../architecture/0004-use-postgres-for-events.md)
+- [Service Catalog: Event Bus](../services/event-bus.md)

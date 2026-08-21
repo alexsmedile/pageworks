@@ -1,0 +1,67 @@
+---
+title: "Postmortem: <YYYY-MM-DD Incident Title — e.g., '2026-05-12 Auth Gateway 502 Outage'>"
+description: "<One-sentence summary of the outage cause, customer impact, and duration>"
+section: operations
+type: postmortem
+status: stable
+owner: <incident-commander-or-team — e.g., "@auth-team">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+incident_date: <YYYY-MM-DD>
+severity: <Sev 1 | Sev 2>
+duration: <e.g., 42 minutes>
+---
+
+# Postmortem: <Incident Title>
+
+## Executive Summary
+
+On **<YYYY-MM-DD>**, between **<START TIME UTC>** and **<END TIME UTC>**, <System / Service> experienced an outage resulting in <summary of impact>. The root cause was identified as <brief explanation>. Full recovery was achieved at **<RESOLVED TIME UTC>** after <mitigation step executed>.
+
+## Impact
+
+- **Total Downtime**: <Duration — e.g., 42 minutes>
+- **Impacted Users**: <e.g., ~15% of active web sessions / ~12,000 API requests failed>
+- **Data Loss**: <None | Detail>
+- **Financial / SLA Impact**: <None / SLA Breach for Tier 1 Enterprise customers>
+
+## Timeline (All times UTC)
+
+| Time (UTC) | Event |
+|---|---|
+| **14:02** | Automated alert fires: `AuthServiceHighErrorRate` in `#alerts-sev1`. |
+| **14:05** | Primary on-call acknowledges alert and opens incident bridge `#incident-20260512-auth`. |
+| **14:12** | Incident Commander identifies bad config push deployed in release v1.4.2. |
+| **14:20** | Rollback triggered to release v1.4.1. |
+| **14:35** | Rollback completes; traffic returns to normal. |
+| **14:44** | Incident officially resolved after 10 minutes of healthy metrics. |
+
+## Root Cause Analysis (5 Whys)
+
+1. **Why did users experience 502 Bad Gateway errors?**
+   The authentication service crashed in a continuous restart loop.
+2. **Why was the service crashing?**
+   An unhandled null pointer occurred during startup when parsing JWT signing keys.
+3. **Why was the signing key null?**
+   The release configuration omitted a required environment variable key name change.
+4. **Why was this not caught in staging?**
+   Staging environment had a fallback mock key configured directly in the deployment YAML.
+5. **Why was staging config drift allowed?**
+   Staging and production deployment manifests were maintained in separate, non-templated files.
+
+## What Went Well
+
+- Automated alerting notified on-call within 2 minutes of the regression.
+- Fast rollback command restored customer traffic in under 15 minutes from triage.
+
+## Where We Got Lucky
+
+- Outage occurred during a scheduled maintenance window with reduced traffic volume.
+
+## Action Items & Preventative Measures
+
+| Action Item | Type | Owner | Target Date | Tracking Ticket |
+|---|---|---|---|---|
+| Unify staging & prod deployment templates using Helm / Kustomize | Preventative | `@infra-team` | <YYYY-MM-DD> | `INFRA-1042` |
+| Add strict startup validation & schema check for JWT environment vars | Mitigation | `@auth-team` | <YYYY-MM-DD> | `AUTH-892` |
+| Add synthetic end-to-end auth smoke test to CI deployment pipeline | Detection | `@qa-team` | <YYYY-MM-DD> | `QA-441` |

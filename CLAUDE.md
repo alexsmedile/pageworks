@@ -87,8 +87,9 @@ Reference loading triggers:
 
 When both are installed:
 
-- Spectacular's `doctor docs` reports discovery (folder + manifest presence) only.
-- After `spectacular archive <slug>` for a SPEC-touching request, spectacular prompts the user about updating docs/ — pageworks takes over if the user confirms.
+- Spectacular (v2.x) owns `.spectacular/` (internal workspace: Anchors, Contracts, Missions, Decisions).
+- Spectacular discovers `docs/` and `docs.yaml` presence, directing public doc authoring to pageworks.
+- Completing a Mission or amending a Contract prompts the user/agent to run `pageworks audit` to reconcile public docs.
 - No automatic invocation across the boundary. User confirmation is required for handoffs.
 
 When pageworks runs alone:
@@ -98,40 +99,34 @@ When pageworks runs alone:
 
 ## Anti-Patterns
 
-- **Bundling internal docs into `docs/`** — PRDs, specs, plans, decisions belong in `.spectacular/` (or wherever the user keeps internal docs). `docs/` is the public surface only.
+- **Bundling internal docs into `docs/`** — Anchors, contracts, missions, decisions belong in `.spectacular/`. `docs/` is the public surface only.
 - **Multiple manifest files** — `docs.yaml` is the only manifest. No `_section.yaml`, no `meta.json` per folder, no fragmented config.
 - **Mixing page types in one file** — a single `.md` is one Diátaxis quadrant. Split when boundaries blur.
-- **Cross-skill schema reads** — pageworks never reads spectacular's `docs-contract.md` (it's deprecated). Schema lives in pageworks's `references/contract.md`.
+- **Cross-skill schema reads** — pageworks never reads spectacular's internal docs schema. Schema lives in pageworks's `references/contract.md`.
 - **Auto-rendering** — pageworks writes config; the user's renderer toolchain builds the site. No bundled `mkdocs build` invocation.
 
 ## Active Development
 
-Pageworks is at v0.1.0 — first release. Tracked work lives in `.spectacular/requests/` (yes, pageworks uses spectacular for its own internal workspace; the two are designed to compose).
+Pageworks is at v0.1.0 — first release. Tracked work lives in `.spectacular/` (using Spectacular v2 workspace model with Core Anchors, Capability Contracts, and Proposals).
 
-### Active Requests
+### Active Proposals & Campaign Blocks
 
-| Slug | Status | Priority | Target | Summary |
+| Ref | Proposal | Priority | Target | Summary |
 |---|---|---|---|---|
-| `pageworks-agents` | planned (gated) | high | v0.2.0 | Tier-4 subagents (docs-writer + docs-reviewer, optional docs-architect) that pageworks spawns for multi-page authoring work |
-| `public-docs-dogfood` | planned | medium | v0.3.0 | Use pageworks to author pageworks's own docs/; deploy to GitHub Pages; canonical example of what pageworks produces |
-| `pageworks-maintenance-v2` | planned (gated) | low | v0.4.0 | Drift detection improvements: `sync-ack` verb, multi-source `synced_from:`, screenshot freshness, optional content-hash awareness |
-| `pageworks-renderers-more` | planned (gated) | low | v0.5.x | Additional renderer adapters (Mintlify, Fumadocs, etc.) — community-contribution-driven |
-
-**Gated** = activation triggers documented in the PLAN; don't start until they fire. **Planned** without "gated" = ready to start whenever priority comes up.
-
-Each request lives in `.spectacular/requests/<slug>/` with `PLAN.md` + `TASKS.md`. Use spectacular CLI (`spectacular status`, `spectacular new`, `spectacular archive`) to manage them.
+| `P1` | `P1-pageworks-agents.md` | high | v0.2.0 | Tier-4 subagents (docs-writer + docs-reviewer, optional docs-architect) for multi-page authoring work |
+| `P2` | `P2-public-docs-dogfood.md` | medium | v0.3.0 | Dogfood pageworks to author its own docs/; deploy to GitHub Pages |
+| `P3` | `P3-pageworks-maintenance-v2.md` | low | v0.4.0 | Drift detection improvements: `sync-ack` verb, multi-source `synced_from:`, screenshot freshness |
+| `P4` | `P4-pageworks-renderers-more.md` | low | v0.5.x | Additional renderer adapters (Mintlify, Fumadocs) |
 
 ### Sequencing logic
 
 ```
 v0.1.0 ✓ first release (CLI + skill + refs + templates + tests)
-v0.2.0 → pageworks-agents (when authoring friction surfaces)
-v0.3.0 → public-docs-dogfood (depends on agents being optional, not required)
-v0.4.0 → pageworks-maintenance-v2 (when drift false-positives become real)
-v0.5.x → pageworks-renderers-more (per-renderer patch releases as PRs arrive)
+v0.2.0 → P1: pageworks-agents (when authoring friction surfaces)
+v0.3.0 → P2: public-docs-dogfood (depends on agents being optional, not required)
+v0.4.0 → P3: pageworks-maintenance-v2 (when drift false-positives become real)
+v0.5.x → P4: pageworks-renderers-more (per-renderer patch releases as PRs arrive)
 ```
-
-This isn't a fixed roadmap — priority shifts with real signal. The 2-of-3 activation rule in each gated PLAN is the gate; don't preempt it because "we have time."
 
 ## Vault Tools / General-Purpose Tools
 

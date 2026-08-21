@@ -1,39 +1,52 @@
 site:
-  name: <PROJECT NAME>
-  tagline: ""
+  name: <PROJECT_NAME>
+  tagline: "Software & platform documentation"
   # base_url: https://example.com   # optional — used by renderer adapters
 
+# ── 6 Main Topic Categories (Information Architecture) ───────────────────────
 sections:
   - id: getting-started
     title: Getting Started
     order: 1
-    pages: [install, quickstart, concepts]
+    pages: [install, quickstart, local-dev-setup]
 
-  - id: guides
-    title: Guides
+  - id: architecture
+    title: Architecture & System Design
     order: 2
+    pages: [overview, shared-infra, 0001-initial-architecture]
+
+  - id: services
+    title: Services & Components
+    order: 3
+    pages: []
+
+  - id: operations
+    title: Operations & Reliability
+    order: 4
     pages: []
 
   - id: reference
-    title: Reference
-    order: 3
+    title: API & Data Reference
+    order: 5
+    pages: []
+
+  - id: standards
+    title: Standards & Governance
+    order: 6
     pages: []
 
 # Optional top-level entries with no section grouping
 # extras:
 #   - changelog       # symlinks to ../CHANGELOG.md
-#   - troubleshooting
 
-# Optional per-renderer hints, consumed by 'pageworks export <renderer>'.
-# Each adapter falls back to its built-in defaults if a key is absent.
-# Full schema: references/renderers.md (pageworks)
+# Optional per-renderer hints consumed by 'pageworks export <renderer>'
 # renderers:
 #   mkdocs:
 #     theme: material
 #     primary: indigo
-#     repo_url: https://github.com/org/<PROJECT NAME>
+#     repo_url: https://github.com/org/<PROJECT_NAME>
 #     edit_uri: edit/main/docs/
 #   docusaurus:
 #     preset: classic
 #     organizationName: org
-#     projectName: <PROJECT NAME>
+#     projectName: <PROJECT_NAME>

@@ -1,39 +1,45 @@
-# Contract — schema for public-facing documentation
+# Contract — Schema & Information Architecture for Software Documentation
 
 Loaded when the orchestrator handles any `pageworks <verb>` command involving `docs/`, or when `pageworks doctor` runs.
 
-This is pageworks's authoritative schema for the `docs/` surface. It supersedes the equivalent `docs-contract.md` that previously lived in spectacular (v0.6.0–v1.1.0), which is deprecated as of spectacular v1.2.0.
+Authoritative schema and structural rules for the `docs/` documentation surface.
 
-## Core principle
+---
 
-**`docs/` is the public-facing surface.** Internal docs (PRDs, specs, plans, decisions) live elsewhere — typically `.spectacular/` if spectacular is in use, or wherever the project keeps its internal workspace.
+## The Dual-Dimension Architecture
 
-| Surface | Audience | Tone |
-|---|---|---|
-| `docs/` | End users + agents consuming the product | Narrative, task-oriented, evergreen |
-| Internal workspace (`.spectacular/` if used) | Devs + coding agents building it | Precise, contract-first, frontmatter-driven |
-
-Audience is a **folder-level** property, never a per-page one. A page lives in `docs/` because it's for consumers. No `audience` frontmatter field.
-
-## Folder shape
+A production software and platform wiki separates **Page Formats** (functional classes of documents) from **Topic Categories** (the Information Architecture hierarchy).
 
 ```
 docs/
-├── docs.yaml                 # the only manifest — sections + page order + site metadata
-├── index.md                  # landing page (always-on; pageworks init scaffolds it)
-├── getting-started/          # one folder per section; folder name matches section id
+├── docs.yaml                 # Authoritative manifest (site + 6 categories + extras)
+├── index.md                  # "Start Here" landing page (system overview, owners, Mermaid diagram)
+├── getting-started/          # Category 1: Onboarding, prerequisites, local dev
 │   ├── install.md
-│   ├── quickstart.md
-│   └── concepts.md
-├── guides/
-│   └── ...
-└── reference/
-    └── ...
+│   └── quickstart.md
+├── architecture/             # Category 2: Topology, shared infra, ADRs
+│   ├── overview.md
+│   └── 0001-initial-architecture.md
+├── services/                 # Category 3: Service Catalog one-pagers
+│   └── auth-service.md
+├── operations/               # Category 4: Runbooks, deployment SOPs, postmortems
+│   ├── rotate-secrets.md
+│   └── 2026-05-auth-outage.md
+├── reference/                # Category 5: API contracts, data schemas, CLI flags
+│   └── api-v2.md
+└── standards/                # Category 6: Coding standards, security, DoD
+    └── review-checklist.md
 ```
 
-**Flat tree.** Sections are folders, pages are files one level deep. No `_section.yaml`, no nested subfolders by default. If a section grows enough to need sub-grouping, express it via nested `pages:` entries in `docs.yaml` — the filesystem stays flat.
+### Information Architecture Rules
 
-## `docs/docs.yaml` schema
+1. **Maximum 3-Level Depth**: Root (`docs/`) $\to$ Topic Section (`getting-started/`) $\to$ Page (`install.md`). Do not create deeply nested directories. Sub-grouping is managed in `docs.yaml`.
+2. **Domain/Workflow Organization**: Organize folders by service, domain, or workflow—never by volatile team hierarchies (teams change; system boundaries rarely do).
+3. **Dedicated "Start Here" Landing Pages**: Every root `index.md` must list system purpose, explicit owners (team/channel), Mermaid architecture diagram, repository links, and dev environment prerequisites.
+
+---
+
+## `docs/docs.yaml` Schema
 
 ```yaml
 site:
@@ -42,142 +48,95 @@ site:
   base_url: https://example.com  # optional — used by renderer adapters
 
 sections:
-  - id: getting-started          # required, kebab-case, must match folder name
+  - id: getting-started          # required, kebab-case, matches folder name
     title: Getting Started       # required, display title
-    order: 1                     # required, integer (controls nav order)
-    pages: [install, quickstart, concepts]   # ordered list of page slugs (no .md)
+    order: 1                     # required, integer
+    pages: [install, quickstart] # ordered list of page slugs (without .md)
 
-  - id: guides
-    title: Guides
+  - id: architecture
+    title: Architecture & System Design
     order: 2
+    pages: [overview, 0001-initial-architecture]
+
+  - id: services
+    title: Services & Components
+    order: 3
     pages: []
 
-extras:                          # optional — pages with no section grouping
-  - changelog                    # resolves to docs/changelog.md (symlink to ../CHANGELOG.md)
-  - troubleshooting
+  - id: operations
+    title: Operations & Reliability
+    order: 4
+    pages: []
+
+  - id: reference
+    title: API & Data Reference
+    order: 5
+    pages: []
+
+  - id: standards
+    title: Standards & Governance
+    order: 6
+    pages: []
+
+extras:                          # optional top-level entries
+  - changelog
 ```
 
-### Field semantics
+---
 
-- **`site.name`** — display name; appears in nav header
-- **`site.tagline`** — short subtitle; appears under name
-- **`site.base_url`** — fully-qualified URL, used by renderer adapters (see [[renderers]])
-- **`sections[].id`** — kebab-case slug; must equal the folder name under `docs/`
-- **`sections[].title`** — human-readable title shown in nav
-- **`sections[].order`** — integer; nav sorted ascending
-- **`sections[].pages`** — ordered list of page slugs (without `.md`); order here wins over per-page `order:`
-- **`extras`** — page slugs that have no section parent; rendered at the top level of nav
+## Page Frontmatter Schema
 
-## Page frontmatter schema
+Every Markdown file in `docs/` must declare structured YAML frontmatter:
 
 ```yaml
 ---
-title: Install
-description: Get the CLI running in two minutes.
-section: getting-started
-type: how-to
-order: 1
+title: "Rotate Database Credentials"
+description: "Step-by-step runbook for rotating PostgreSQL database credentials in production."
+section: operations
+type: runbook
 status: stable
-since: 0.1.0
-updated: 2026-05-23
+owner: "@platform-sre"
+last_reviewed: 2026-08-22
+updated: 2026-08-22
+since: 1.0.0
+synced_from: ../../../.spectacular/contracts/CC-cli.md
 ---
 ```
 
-| Field | Required | Default | Notes |
-|---|---|---|---|
-| `title` | yes | — | Display title; doctor warns if absent and falls back to first H1 |
-| `description` | yes | — | One sentence; used in nav previews and SEO |
-| `section` | yes | — | Must equal a section id in `docs.yaml`. `""` for top-level extras |
-| `type` | recommended | — | One of `tutorial` / `how-to` / `reference` / `explanation` (Diátaxis); see [[page-types]] |
-| `order` | no | position in `docs.yaml`'s `pages:` array | Per-page override |
-| `status` | yes | — | `stable` / `draft` / `deprecated` |
-| `since` | no | — | First version this page applied to (semver) |
-| `updated` | yes | — | ISO date (`YYYY-MM-DD`). Doctor flags if older than file mtime by more than 14 days |
-| `synced_from` | no | — | Path to a source spec/file; enables drift detection (see [[maintenance]]) |
+### Frontmatter Field Specifications
 
-> **No `audience` field.** Folder is the audience boundary — see Core principle above.
-
-## Validation rules (`pageworks doctor` + skill `review`)
-
-| Severity | Check |
-|---|---|
-| error | `docs.yaml` missing or unparseable |
-| error | Page declared in `docs.yaml` but file missing on disk |
-| warning | Page file present but not declared in `docs.yaml` (orphan) |
-| error | Page missing required frontmatter (`title`, `description`, `section`, `status`, `updated`) |
-| error | Page `section:` doesn't match any section in `docs.yaml` |
-| warning | Page `updated:` is more than 14 days older than file mtime |
-| warning | Section folder exists but has no pages declared |
-| info | Section declared in `docs.yaml` with empty `pages:` (intentional empty section is fine) |
-| info | Page missing `type:` (Diátaxis type) — recommended but not required in v0.1.0 |
-
-## Mechanical fixes (`pageworks doctor --fix`)
-
-| Trigger | Fix |
-|---|---|
-| Missing required frontmatter fields | Inject stub frontmatter at top of file (status: draft, updated: today, title: first H1 if present) |
-| Duplicate entries in `docs.yaml` `pages:` | Dedupe in place |
-| `docs/` dir missing | `mkdir -p docs/` (only when `docs.yaml` is being referenced from config or scaffold attempt) |
-
-Judgment fixes (delete orphan files, rename sections, merge pages) require skill intervention — never mechanical.
-
-## Renderer-agnostic by design
-
-`docs.yaml` + page frontmatter are designed to map cleanly to:
-- MkDocs `mkdocs.yml` `nav:` block — **shipped (v0.1.0)**, see [[renderers]]
-- Docusaurus `sidebars.js` + per-page frontmatter — **shipped (v0.1.0)**, see [[renderers]]
-- Mintlify `mint.json` (sections → groups, pages → entries) — community-contributable
-- Fumadocs `meta.json` per folder — community-contributable
-
-The schema itself is renderer-neutral — the user picks any renderer or stays renderer-less. v0.1.0 ships two adapters via `pageworks export <renderer>`. Other renderers are documented as a contribution path in [[renderers]] § Contributing a renderer.
-
-### `renderers:` block
-
-`docs.yaml` accepts an optional top-level `renderers:` map for renderer-specific hints. Each top-level key under `renderers:` is a renderer name; its value is a map of adapter-specific settings. Adapters consume their own sub-key; unknown sub-keys within a known renderer are ignored.
-
-```yaml
-renderers:                              # optional, additive — base schema works without it
-  mkdocs:
-    theme: material                     # default if omitted
-    primary: indigo                     # palette primary color
-    scheme: slate                       # light | slate | default
-    repo_url: https://github.com/org/repo
-    edit_uri: edit/main/docs/
-  docusaurus:
-    preset: classic                     # default if omitted
-    organizationName: org
-    projectName: repo
-```
-
-#### Recognized renderer names
-
-| Renderer | Adapter ships at | Status |
+| Field | Required | Notes |
 |---|---|---|
-| `mkdocs` | `pageworks export mkdocs` | shipped (v0.1.0) |
-| `docusaurus` | `pageworks export docusaurus` | shipped (v0.1.0) |
-| `mintlify` | — | not shipped (community-contributable) |
-| `fumadocs` | — | not shipped (community-contributable) |
+| `title` | yes | Display title; doctor warns if absent and falls back to first H1. |
+| `description` | yes | 1–2 sentences; used for navigation previews and search summaries. |
+| `section` | yes | Must match a section `id` in `docs.yaml`. `""` for top-level root pages. |
+| `type` | yes | One of the 6 Core Classes: `tutorial`, `how-to`, `reference`, `explanation`, `adr`, `service-catalog`, `runbook`, `postmortem`. |
+| `status` | yes | `stable`, `draft`, `deprecated`, or `superseded` (for ADRs). |
+| `owner` | yes | Owning team, Slack channel, or lead (e.g. `@infra-team`, `#devops`). |
+| `last_reviewed`| recommended | ISO date (`YYYY-MM-DD`). Flags 180-day stale review warnings. |
+| `updated` | yes | ISO date (`YYYY-MM-DD`). Validated against file filesystem mtime. |
+| `since` | no | Version when page was introduced. |
+| `synced_from` | no | Relative path to internal spec/anchor for drift tracking. |
 
-Any other top-level key under `renderers:` is **unknown** and triggers a doctor warning (it's allowed — community adapters may register their own — but the warning surfaces typos like `mkdoc:` vs `mkdocs:`).
+---
 
-#### Per-renderer key reference
+## Validation & Doctor Rules (`pageworks doctor`)
 
-The full mapping of `docs.yaml` source → renderer config target lives in [[renderers]]. That doc is authoritative for which keys each adapter consumes.
-
-#### Validation (`pageworks doctor`)
-
-| Severity | Check |
+| Severity | Condition |
 |---|---|
-| info | `renderers:` block absent (every adapter falls back to its built-in defaults) |
-| pass | `renderers:` parses, all top-level keys are recognized renderer names |
-| warning | Top-level key under `renderers:` is not a recognized renderer name (typo or unknown adapter) |
-| error | `renderers:` value is not a map (e.g., a bare scalar or list) |
+| **error** | `docs.yaml` missing or invalid YAML syntax |
+| **error** | Declared page in `docs.yaml` missing from filesystem |
+| **error** | Page missing required frontmatter (`title`, `description`, `section`, `status`, `updated`) |
+| **error** | Broken internal Markdown link (`[text](target.md)` target does not exist) |
+| **error** | Folder hierarchy depth exceeds 3 levels |
+| **warning** | Missing `owner:` frontmatter field |
+| **warning** | Orphan Markdown file (present on disk but omitted from `docs.yaml`) |
+| **warning** | Stale content: `last_reviewed:` or `updated:` is older than 180 days |
+| **warning** | `updated:` is older than file filesystem mtime by $> 14$ days |
+| **warning** | Unknown renderer key in `renderers:` block |
+| **info** | Page missing `type:` classification |
 
-## Anti-patterns
+### Mechanical Repairs (`pageworks doctor --fix`)
 
-- **Per-folder manifest files (`_section.yaml`, `meta.json`)** — multiplies maintenance touchpoints; one `docs.yaml` is enough
-- **Per-page `audience` field** — folder is the audience boundary; per-page audience is ceremony
-- **Sections deeper than one level on disk** — express sub-grouping in `docs.yaml`, keep the filesystem flat
-- **Mixing internal-doc content into `docs/`** — PRDs, specs, plans, decisions belong in the project's internal workspace (e.g. `.spectacular/` if spectacular is in use); `docs/` is the public-facing surface only
-- **Auto-rendering** — pageworks writes portable markdown + manifest; the renderer runs in the user's tooling. No built-in server, no built-in build.
-- **Mixing Diátaxis types in one page** — a single `.md` is one quadrant. If a page is doing two jobs, split it. See [[page-types]].
+- Injects missing required frontmatter stubs (`status: draft`, `owner: @tbd`, `updated: <TODAY>`, `last_reviewed: <TODAY>`).
+- Normalizes duplicate entries in `docs.yaml`.

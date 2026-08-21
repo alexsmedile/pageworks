@@ -1,23 +1,53 @@
 ---
 title: <PROJECT NAME>
-description: User-facing documentation for <PROJECT NAME>.
+description: "Single source of truth for <PROJECT NAME> — architecture, services, operations, and onboarding."
 section: ""
-order: 0
-status: draft
-updated: <DATE>
+type: explanation
+status: stable
+owner: <team-or-role — e.g., "@platform-core">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
 ---
 
 # <PROJECT NAME>
 
-Welcome to the documentation. Start here, then drill into the sections below.
+Welcome to the **<PROJECT NAME>** software & platform documentation. This repository serves as the single source of truth for system architecture, service catalogs, runbooks, and developer onboarding.
 
-## Sections
+## System Overview & Ownership
 
-- **Getting Started** — install + quickstart + core concepts
-- **Guides** — task-oriented walkthroughs
-- **Reference** — CLI, configuration, schema details
+| Detail | Value |
+|---|---|
+| **Owning Team** | <Team Name — e.g., Platform Engineering> |
+| **Slack Channel** | `#<channel-name>` |
+| **On-Call Support** | [PagerDuty Escalation Policy](<URL>) |
+| **Source Repository** | [github.com/org/<repo>](<URL>) |
+| **Deployment Pipelines** | [GitHub Actions / CI](<URL>) |
 
-<!--
-  This is the landing page for the docs/ tree.
-  Edit freely. The skill leaves index.md alone after init.
--->
+## System Topology
+
+```mermaid
+flowchart TD
+    Clients["Client Applications & APIs"] --> Gateway["API Gateway / Router"]
+    Gateway --> Services["Core Services & Components"]
+    Services --> Storage[("Databases & Event Streams")]
+```
+
+## Start Here & Quick Navigation
+
+### 1. [Getting Started & Onboarding](getting-started/quickstart.md)
+Prerequisites, repository setup, credential provisioning, and local environment onboarding.
+
+### 2. [Architecture & System Design](architecture/overview.md)
+High-level topology diagrams, component boundaries, shared infrastructure, and [ADRs](architecture/0001-initial-architecture.md).
+
+### 3. [Services & Components](services/catalog.md)
+Service catalog one-pagers, owners, SLO targets, telemetry dashboards, and dependencies.
+
+### 4. [Operations & Reliability](operations/runbooks.md)
+Standard operating procedures, deployment guides, on-call runbooks, and incident postmortems.
+
+### 5. [API & Data Reference](reference/api-overview.md)
+API contracts (OpenAPI/GraphQL), event schemas (Kafka/NATS), CLI flags, and configuration specs.
+
+### 6. [Standards & Governance](standards/guidelines.md)
+Coding conventions, security policies, Definition of Done (DoD), and pull request review standards.
