@@ -7,7 +7,7 @@ description: |
   and interactive Mermaid.js diagrams.
 compatibility: "commonmark >= 0.30"
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   category: "devtools"
   status: "published"
   tags: "documentation, styling, formatting, markdown, developer-experience, mermaid"

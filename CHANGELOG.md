@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [0.3.0] — 2026-08-22 — Designer Mode, 5-Layer Quality Gates & Standalone Wiki-Prettifier
+
+### Added
+- **Standalone `wiki-prettifier` Skill** (`skills/wiki-prettifier/`): Aesthetic & UX refactoring engine with 8 modular portal components (Hero, Prereqs, Tabs, Outputs, Alerts, Mermaid, Tables, Next Steps).
+- **Advanced Designer Mode** (`references/designer-mode.md`): Pre-crafted design presets (`stripe-indigo`, `nordic-cyan`, `minimalist-slate`, `emerald-terminal`) with custom CSS variables export for MkDocs Material (`docs/stylesheets/custom.css`) and Docusaurus v3+ (`src/css/custom.css`).
+- **5-Layer Automated CI Quality Gates** (`references/quality-gates.md`):
+  - Layer 1: Markdownlint structural checking (`.markdownlint.json`).
+  - Layer 2: Automated prose & style checking via Vale and cspell (`.vale.ini`, `.cspell.json`).
+  - Layer 3: Dead link and deep anchor verification via lychee.
+  - Layer 4: Frontmatter, depth, and 180-day staleness verification via `pageworks doctor`.
+  - Layer 5: Executable code snippet runners in CI.
+  - Pipeline: `.github/workflows/docs-quality.yml`.
+- **Time to First Success UX**: Standardized "Punchline First" headers, realistic sandbox defaults (`org_slug="payments-prod"`), and dedicated "Troubleshooting & Gotchas" 3-column tables.
+- **Freshness Acknowledgment Command**: `pageworks sync-ack <page>` to bump `last_reviewed:` timestamp in 10ms.
+- **Git-Guard Pre-Commit Hook**: Installed `scripts/hooks/pre-commit` to prevent version drift across all 7 repository manifest and documentation sites.
+
 ## [0.2.0] — 2026-08-22 — Software & Platform Wiki Dual-Dimension Architecture
 
 ### Added

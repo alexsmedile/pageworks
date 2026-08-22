@@ -1,20 +1,25 @@
 # pageworks
 
+![Version](https://img.shields.io/badge/version-0.3.0-blue.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
+
 **Write docs that don't rot.**
 
-Pageworks is a Claude Code / Codex skill + CLI that owns the public-facing documentation surface of a project: scaffold, schema, page authoring, renderer export, and drift detection as specs change.
+Pageworks is a Claude Code / Codex / Antigravity skill suite + CLI that owns the public-facing documentation surface of a project: scaffold, schema, page authoring with the 6 Core Page Classes across 6 Main Topic Categories, renderer export, Designer Mode styling, 5-layer CI quality gates, and drift detection as specs change.
 
-It's the answer to "we should document this" — without inheriting half a docs framework.
+It ships with **`wiki-prettifier`** — an aesthetic refactoring engine that turns raw Markdown into Stripe/Tailwind-quality developer portals.
 
 ---
 
 ## What it does
 
-- **Scaffolds** `docs/` with a clean, renderer-agnostic structure (manifest + flat sections + Diátaxis page templates)
-- **Authors** pages from page-type templates (tutorial / how-to / reference / explanation) with consistent voice
-- **Exports** to MkDocs Material or Docusaurus — generated configs + a working GitHub Pages workflow
-- **Validates** with `pageworks doctor` — schema, frontmatter, orphan files, freshness
-- **Maintains** docs against drift — flags pages whose source spec changed since last update
+- **Dual-Dimension Architecture**: 6 Page Classes $\times$ 6 Main Topic Categories for zero-friction information architecture.
+- **Scaffolds** `docs/` with a clean, renderer-agnostic structure (`docs.yaml` manifest + Diátaxis templates + "Start Here" landing page).
+- **Authors** pages with time-to-first-success punchlines, realistic defaults, "Why" annotations, and troubleshooting gotchas.
+- **Prettifies** existing Markdown via `wiki-prettifier` (action headings, multi-tool tabs, Mermaid diagrams, 5-column parameter tables).
+- **Designer Mode**: Pre-crafted themes (`stripe-indigo`, `nordic-cyan`, `minimalist-slate`, `emerald-terminal`) with custom CSS exports.
+- **Exports** to MkDocs Material (with search, tabs, Mermaid superfences) or Docusaurus v3+ (React/MDX).
+- **5-Layer CI Quality Gates**: `.markdownlint.json`, `.vale.ini`, `.cspell.json`, lychee link validation, and `pageworks doctor`.
+- **Maintains** docs against drift with 180-day stale audits and `pageworks sync-ack`.
 
 ## Install
 

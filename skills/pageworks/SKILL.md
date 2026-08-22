@@ -7,7 +7,7 @@ description: |
   stale-page drift maintenance.
 compatibility: "spectacular >= 2.0.0"
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   category: "devtools"
   status: "published"
   tags: "documentation, docs, mkdocs, docusaurus, wiki, diataxis"

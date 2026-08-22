@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "pageworks",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Public-facing software & platform documentation skill — owns the docs/ surface end-to-end: Dual-Dimension Architecture (6 Page Classes & 6 Topic Categories), scaffold, schema, page authoring, renderer export (MkDocs Material, Docusaurus v3+, Docker), and 180-day stale-page drift maintenance.",
   "author": {
     "name": "Alessandro Smedile",
