@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# wiki-prettifier — deterministic mechanical inspection & formatting helper
+# Self-contained executable bundled inside wiki-prettifier skill.
+
+set -euo pipefail
+
+PRETTIFIER_VERSION="0.1.0"
+
+cmd_audit() {
+  local target="${1:-}"
+  [[ -z "$target" ]] && { echo "Usage: prettify audit <path/to/file.md>"; exit 1; }
+  [[ ! -f "$target" ]] && { echo "Error: File not found: '$target'"; exit 1; }
+
+  local issues=0
+  echo "Auditing: $target"
+  echo "──────────────────────────────────────────────"
+
+  # 1. Check for uncopyable $ prompts in code blocks
+  if grep -qE '^\$ ' "$target" || grep -qE '^[[:space:]]+\$ ' "$target"; then
+    echo "  ⚠️  Uncopyable '\$' terminal prompts detected in code blocks"
+    issues=$((issues + 1))
+  fi
+
+  # 2. Check for missing prerequisites block
+  if ! grep -qiE 'prerequisites' "$target"; then
+    echo "  ℹ  Missing explicit Prerequisites check block at top"
+  fi
+
+  # 3. Check for passive / abstract headings
+  if grep -qiE '## (Configuration Info|Database Setup|Overview Info)' "$target"; then
+    echo "  ⚠️  Passive headings found — convert to active imperative verbs"
+    issues=$((issues + 1))
+  fi
+
+  # 4. Check for ASCII art boxes
+  if grep -qE '\+---+\+' "$target"; then
+    echo "  ⚠️  ASCII art diagrams found — convert to native Mermaid.js"
+    issues=$((issues + 1))
+  fi
+
+  # 5. Check for alerts
+  if ! grep -qE '> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]' "$target"; then
+    echo "  ℹ  No semantic alert callouts found"
+  fi
+
+  echo ""
+  if (( issues == 0 )); then
+    echo "Audit passed clean (0 structural issues)."
+  else
+    echo "Audit found ${issues} optimization opportunity/opportunities."
+  fi
+}
+
+cmd_strip_prompts() {
+  local target="${1:-}"
+  [[ -z "$target" ]] && { echo "Usage: prettify strip-prompts <path/to/file.md>"; exit 1; }
+  [[ ! -f "$target" ]] && { echo "Error: File not found: '$target'"; exit 1; }
+
+  sed -E 's/^[[:space:]]*\$[[:space:]]+//' "$target" > "${target}.tmp" && mv "${target}.tmp" "$target"
+  echo "  ✓ Stripped '\$' prompts from ${target}"
+}
+
+main() {
+  local subcmd="${1:-}"
+  case "$subcmd" in
+    --version|-v)
+      echo "wiki-prettifier ${PRETTIFIER_VERSION}"
+      exit 0
+      ;;
+    audit)
+      shift; cmd_audit "$@"
+      ;;
+    strip-prompts)
+      shift; cmd_strip_prompts "$@"
+      ;;
+    *)
+      echo "wiki-prettifier ${PRETTIFIER_VERSION}"
+      echo "Usage: prettify audit <file> | prettify strip-prompts <file>"
+      exit 0
+      ;;
+  esac
+}
+
+main "$@"
