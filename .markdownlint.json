@@ -1,0 +1,6 @@
+{
+  "default": true,
+  "MD013": false,
+  "MD025": { "level": 1 },
+  "MD033": { "allowed_elements": ["details", "summary", "kbd", "Tabs", "TabItem"] }
+}

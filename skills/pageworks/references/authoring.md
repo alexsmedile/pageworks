@@ -7,6 +7,7 @@ Use this when: Scaffolding new documentation pages, choosing template classes, d
 - Voice, Tone & Action Headings: [prose-patterns.md](prose-patterns.md)
 - Wiki Architecture & Component Patterns: [wiki-patterns.md](wiki-patterns.md)
 - Designer Mode & Custom Themes: [designer-mode.md](designer-mode.md)
+- Quality Gates & Semantic Review: [quality-gates.md](quality-gates.md)
 - Drift Detection & Stale Auditing: [maintenance.md](maintenance.md)
 
 ---

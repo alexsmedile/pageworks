@@ -1,0 +1,47 @@
+name: Documentation Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs-quality.yml'
+      - '.markdownlint.json'
+      - '.vale.ini'
+      - '.cspell.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: 5-Layer Documentation Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Layer 1: Markdownlint
+      - name: Lint Markdown Structure
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: 'docs/**/*.md'
+        continue-on-error: true
+
+      # Layer 2: Spell Checking
+      - name: Check Code & Technical Spelling
+        uses: streetsidesoftware/cspell-action@v5
+        with:
+          files: 'docs/**/*.md'
+        continue-on-error: true
+
+      # Layer 3: Dead Link Checker
+      - name: Validate Links and Anchors
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress './docs/**/*.md'
+        continue-on-error: true
+
+      # Layer 4: Pageworks Metadata & 180-Day Governance
+      - name: Run Pageworks Doctor
+        run: ./skills/pageworks/scripts/pageworks doctor

@@ -2,6 +2,11 @@
 
 Use this when: Executing specific prettification passes (hero, tabify, diagramify, tabulate, calloutify, codify, mesh) on a target Markdown file.
 
+- Component specifications: [components.md](components.md)
+- Quality gates & linters: [quality-gates.md](quality-gates.md)
+- Designer styling tokens: [designer-mode.md](designer-mode.md)
+- Target SSG platforms: [platforms.md](platforms.md)
+
 ---
 
 ## 1. Hero Pass (`prettify hero`)

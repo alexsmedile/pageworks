@@ -1,0 +1,19 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "pageworks",
+    "diataxis",
+    "docusaurus",
+    "mkdocs",
+    "mermaid",
+    "superfences",
+    "postmortem",
+    "runbook",
+    "healthz",
+    "kubeconfig",
+    "smedile",
+    "skizl"
+  ],
+  "ignorePaths": ["node_modules/**", "_site/**", "build/**", ".git/**"]
+}
