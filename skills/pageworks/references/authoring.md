@@ -5,6 +5,7 @@ Use this when: Scaffolding new documentation pages, choosing template classes, d
 - Schema and Information Architecture: [contract.md](contract.md)
 - The 6 Core Page Classes: [page-types.md](page-types.md)
 - Voice, Tone & Action Headings: [prose-patterns.md](prose-patterns.md)
+- Wiki Architecture & Component Patterns: [wiki-patterns.md](wiki-patterns.md)
 - Drift Detection & Stale Auditing: [maintenance.md](maintenance.md)
 
 ---

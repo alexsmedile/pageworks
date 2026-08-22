@@ -30,7 +30,7 @@ bash "${PAGWORKS_SKILL_DIR:-skills/pageworks}/scripts/pageworks" doctor
 |---|---|---|
 | `init` | Scaffold fresh docs tree (`--preset platform`) | Load [references/contract.md](references/contract.md) $\to$ run `scripts/pageworks init` |
 | `new` | Scaffold new page from 6 Core Classes | Load [references/authoring.md](references/authoring.md) + [references/page-types.md](references/page-types.md) |
-| `review` | Quality gate: prose, headings, copy-paste | Load [references/authoring.md](references/authoring.md) + [references/prose-patterns.md](references/prose-patterns.md) |
+| `review` | Quality gate: prose, components, portal UI | Load [references/authoring.md](references/authoring.md) + [references/wiki-patterns.md](references/wiki-patterns.md) |
 | `export` | Export to MkDocs, Docusaurus, or Docker | Load [references/renderers.md](references/renderers.md) $\to$ run `scripts/pageworks export` |
 | `doctor` | Validate schema, links, depth, frontmatter | Load [references/contract.md](references/contract.md) $\to$ run `scripts/pageworks doctor [--fix]` |
 | `status` | Inventory briefing across 6 categories | Load [references/contract.md](references/contract.md) $\to$ report section state |
