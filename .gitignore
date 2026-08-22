@@ -6,11 +6,8 @@ _backups/
 
 # Spectacular local-scope workspace (gitignored by convention)
 .spectacular.local/
-
-# Bootstrapped spectacular skill (dev-time methodology, not pageworks code)
-# Track skills.lock so the version is reproducible; install via `spectacular init --update`
-.agents/skills/spectacular/
-.claude/skills/spectacular
+.agents/
+.claude/
 
 # OS junk
 .DS_Store
@@ -21,5 +18,15 @@ Thumbs.db
 *.swo
 *~
 
-# Test scratch (mktemp-style)
+# Build and SSG output artifacts
+_site/
+site/
+build/
+dist/
+node_modules/
+.docusaurus/
+.venv/
+__pycache__/
+
+# Test scratch
 /tmp/pageworks-*-test-*

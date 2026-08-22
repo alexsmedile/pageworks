@@ -1,0 +1,20 @@
+name: Scheduled Docs Health & Drift Audit
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday at 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: 180-Day Staleness & Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Pageworks Doctor Audit
+        run: ./skills/pageworks/scripts/pageworks doctor

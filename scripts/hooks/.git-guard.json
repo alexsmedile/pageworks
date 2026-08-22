@@ -1,0 +1,7 @@
+{
+  "skill_check": "all",
+  "cli_version": {
+    "file": "skills/pageworks/scripts/pageworks",
+    "variable": "PAGEWORKS_VERSION"
+  }
+}

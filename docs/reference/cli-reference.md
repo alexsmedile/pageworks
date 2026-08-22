@@ -40,3 +40,13 @@ Validates schema, frontmatter fields, orphan pages, 180-day staleness, broken ma
 
 ### Options
 - `--fix`: Automatically repairs common frontmatter omissions.
+
+---
+
+## `pageworks sync-ack <page>`
+
+Acknowledges freshness on an audited page by updating `last_reviewed: <TODAY>` in frontmatter.
+
+### Arguments
+- `<page>`: Relative or absolute path to page (e.g. `getting-started/install` or `docs/services/auth.md`).
+

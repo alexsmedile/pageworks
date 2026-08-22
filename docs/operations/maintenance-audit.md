@@ -26,13 +26,19 @@ Look for warnings:
 ⚠️  docs/services/legacy-auth.md — content has not been reviewed in > 180 days (210 days old — stale)
 ```
 
-### Step 2 — Review Document Accuracy
+### Step 2 — Review Document Accuracy & Acknowledge
 1. Open the page and inspect code snippets, endpoints, and architectural assertions.
 2. Test commands against current code.
-3. If valid, update `last_reviewed: <TODAY>` in frontmatter.
+3. If valid, acknowledge freshness in one command:
+   ```bash
+   pageworks sync-ack docs/services/legacy-auth.md
+   ```
 4. If outdated, update prose and examples before bumping the date.
 
-### Step 3 — Re-run Doctor
+### Step 3 — Automated CI/CD Auditing
+Automated bi-annual audits run via `.github/workflows/docs-audit.yml` every Monday at 09:00 UTC, triggering alerts if unacknowledged stale pages exist.
+
+### Step 4 — Re-run Doctor
 ```bash
 pageworks doctor
 ```
