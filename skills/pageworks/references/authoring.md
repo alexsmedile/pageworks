@@ -6,6 +6,7 @@ Use this when: Scaffolding new documentation pages, choosing template classes, d
 - The 6 Core Page Classes: [page-types.md](page-types.md)
 - Voice, Tone & Action Headings: [prose-patterns.md](prose-patterns.md)
 - Wiki Architecture & Component Patterns: [wiki-patterns.md](wiki-patterns.md)
+- Designer Mode & Custom Themes: [designer-mode.md](designer-mode.md)
 - Drift Detection & Stale Auditing: [maintenance.md](maintenance.md)
 
 ---

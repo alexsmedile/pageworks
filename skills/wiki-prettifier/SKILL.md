@@ -37,6 +37,7 @@ bash "${WIKI_PRETTIFIER_DIR:-skills/wiki-prettifier}/scripts/prettify" audit <pa
 | `tabulate` | Convert bulleted parameter lists to tables | Load [references/components.md](references/components.md) $\to$ build 5-column table |
 | `calloutify` | Convert inline warnings to semantic alerts | Load [references/components.md](references/components.md) $\to$ inject `> [!ALERT]` |
 | `codify` | Strip `$`, tag languages, attach output blocks | Run `scripts/prettify strip-prompts` $\to$ attach expected outputs |
+| `designer` | Apply theme tokens and custom CSS styling | Load [references/designer-mode.md](references/designer-mode.md) $\to$ configure presets |
 | `mesh` | Insert Prerequisites & Next Steps footer | Load [references/components.md](references/components.md) $\to$ eliminate dead ends |
 
 ## 3. The 8 Core Portal Components

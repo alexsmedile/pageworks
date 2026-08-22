@@ -2,7 +2,7 @@
 title: <How to <verb> <object> — e.g., "How to rotate staging API keys">
 description: <One sentence — the specific problem solved>
 section: <section-id>
-type: how-to # or runbook
+type: how-to
 status: draft
 owner: <team-or-role — e.g., "@platform-sec">
 last_reviewed: <YYYY-MM-DD>
@@ -13,49 +13,86 @@ applies_to:
 
 # <How to <verb> <object>>
 
-<One sentence: who this is for and what problem it solves. Assume competence — get straight to the recipe.>
+<Punchline: Rotate compromised or expiring staging API keys with zero service downtime in under 3 minutes.>
 
-## When to use this
+> [!IMPORTANT]
+> **Prerequisites & Permissions**:
+> - Active Vault authentication session (`vault token lookup`)
+> - Kubernetes cluster context set to staging (`kubectl config current-context`)
 
-- <Scenario trigger 1 — e.g., 'Staging credentials expire or are leaked'>
-- <Scenario trigger 2 — e.g., 'Routine quarterly secret rotation'>
+---
 
-## Prerequisites
+## When to use this recipe
 
-- Access to target environment: `vault login`
-- CLI toolchain installed: `<TOOL_NAME>`
+- Scenario 1: Staging credentials expire or are leaked in logs.
+- Scenario 2: Routine quarterly secret rotation policy.
+
+---
 
 ## Action Steps
 
-### Step 1 — <Action-oriented subhead — e.g., 'Generate new credential in Vault'>
+### Step 1 — Generate and Store New Secret in Vault
+
+<Explain the "Why" behind parameters.>
 
 ```bash
-export VAULT_ADDR="https://vault.internal:8200"
-vault kv put secret/staging/api-keys key="<NEW_API_KEY>"
+export VAULT_ADDR="https://vault.staging.internal:8200"
+
+# Generate 32-byte cryptographically secure token
+NEW_KEY=$(openssl rand -hex 32)
+
+vault kv put secret/staging/auth-service/api-keys \
+  primary_key="${NEW_KEY}" \
+  rotation_epoch="$(date +%s)"
 ```
 
-### Step 2 — <Action-oriented subhead — e.g., 'Trigger deployment reload'>
+```
+Success! Data written to: secret/staging/auth-service/api-keys
+```
+
+---
+
+### Step 2 — Trigger Zero-Downtime Rolling Restart
 
 ```bash
-kubectl rollout restart deployment/<SERVICE_NAME> -n staging
+kubectl rollout restart deployment/auth-service -n staging
+kubectl rollout status deployment/auth-service -n staging --timeout=60s
 ```
 
-## Verify Resolution
+```
+deployment.apps/auth-service restarted
+Waiting for deployment "auth-service" rollout to finish: 1 of 2 updated replicas are available...
+deployment "auth-service" successfully rolled out
+```
 
-<Execute a command to confirm the recipe succeeded.>
+---
+
+### Step 3 — Verify Secret Propagation
 
 ```bash
-curl -H "Authorization: Bearer <NEW_API_KEY>" https://staging.internal/api/v1/ping
+curl -i -H "Authorization: Bearer ${NEW_KEY}" https://auth.staging.internal/v1/healthz
 ```
 
-## Troubleshooting
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
 
-| Symptom | Cause | Fix |
+{"status":"authenticated","key_epoch":"valid"}
+```
+
+---
+
+## Troubleshooting & Common Gotchas
+
+| Symptom / Error | Root Cause | Immediate Fix |
 |---|---|---|
-| `401 Unauthorized` | New secret has not propagated to pod environment | Wait 30s or check `kubectl get pods` restart status |
-| `500 Server Error` | Key format mismatch | Ensure key does not contain unescaped newline characters |
+| `401 Unauthorized` | New secret has not mounted into the pod environment. | Inspect pod rollout status with `kubectl get pods -n staging` and wait 15s. |
+| `vault: permission denied` | Vault token expired. | Re-authenticate via `vault login -method=oidc`. |
+| `CrashLoopBackOff` | Secret value contained unescaped trailing newline. | Re-write Vault secret using `openssl rand -hex 32` without trailing `\n`. |
 
-## Related
+---
 
-- [API Reference](../reference/api-v2.md)
-- [Architecture: Secret Management ADR](../architecture/0002-vault-secrets.md)
+## Related Runbooks & Architecture
+
+- Link: API Contract Reference -> reference/api-v2.md
+- Link: ADR 0002: HashiCorp Vault Secrets -> architecture/0002-vault-secrets.md

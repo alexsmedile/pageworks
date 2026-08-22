@@ -1,75 +1,99 @@
 ---
 title: <Tutorial title — verb-led, e.g., "Build your first microservice">
-description: <One sentence — what the reader will have running at the end>
+description: <One sentence — what the reader will build in the next 5-10 minutes>
 section: <section-id>
 type: tutorial
 status: draft
 owner: <team-or-role — e.g., "@onboarding-guild">
 last_reviewed: <YYYY-MM-DD>
 updated: <YYYY-MM-DD>
-prerequisites:
-  - <Skill, tool, or knowledge required>
-estimated_time: <e.g., 15 minutes>
+estimated_time: <e.g., 10 minutes>
 ---
 
 # <Tutorial title>
 
-<One-paragraph framing — what we are building together and why it matters. Avoid jargon; write to a first-time onboarder.>
+<One-sentence punchline: In the next 10 minutes, you will build and launch a running local service connected to PostgreSQL.>
 
-## What you will have at the end
+> [!IMPORTANT]
+> **Prerequisites & Verification**:
+> - Node.js $\ge 20.0.0$ (`node -v`)
+> - Docker Engine (`docker ps`)
+> - Git (`git --version`)
 
-<Concrete artifact — a running local microservice, a deployed endpoint, a verified connection. Show the exact end state.>
+---
 
-## Before you start
+## Step 1 — Initialize Workspace with Realistic Defaults
 
-<Prerequisites in plain language with exact commands to verify them.>
-
-```bash
-docker --version
-node --version
-```
-
-## Step 1 — <Action-oriented first step — e.g., 'Clone and configure the repository'>
-
-<Imperative voice. One step does one concrete thing. Show the command, then show the expected output the reader will see.>
+<Imperative instructions. Use realistic defaults rather than abstract placeholders.>
 
 ```bash
-git clone git@github.com:org/<repo>.git
-cd <repo>
+git clone git@github.com:org/payment-service.git
+cd payment-service
 cp .env.example .env
 ```
 
 ```
-✓ Cloned repository
-✓ Environment file initialized
+✓ Cloned payment-service (main)
+✓ Initialized .env with staging defaults
 ```
 
-If you see `<COMMON_ERROR>`, `<one-line fix or link>`.
+---
 
-## Step 2 — <Action-oriented next step — e.g., 'Launch local dependencies'>
+## Step 2 — Configure Environment Variables
+
+<Explain the "Why" behind key configurations so developers learn the underlying system.>
 
 ```bash
-docker compose up -d
+# Set connection pool size to 20 to prevent pool exhaustion during traffic spikes
+export DB_POOL_SIZE=20
+export SERVICE_PORT=8080
 ```
 
-## Step 3 — <Action-oriented verification step — e.g., 'Verify the running service'>
+---
 
-<End every tutorial with a concrete verification command the reader executes themselves.>
+## Step 3 — Launch Dependencies
 
 ```bash
-curl -f http://localhost:8080/healthz
+docker compose up -d postgres redis
 ```
 
-```json
-{"status":"healthy","version":"1.0.0"}
+```
+[+] Running 2/2
+ ✔ Container payment-service-postgres-1  Started
+ ✔ Container payment-service-redis-1     Started
 ```
 
-## What just happened
+---
 
-<2–4 sentences explaining the underlying mental model. This is the only place a tutorial pauses to explain — and it is at the end, after tangible success.>
+## Step 4 — Verify Local Health Check
 
-## Next
+<Always provide a concrete verification test with exact expected output.>
 
-- [How-to: Deploy to Staging](../operations/deploy-staging.md)
-- [Reference: Configuration Variables](../reference/config-env.md)
-- [Explanation: Architecture Overview](../architecture/system-overview.md)
+```bash
+curl -i http://localhost:8080/healthz
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"status":"healthy","database":"connected","version":"1.0.0"}
+```
+
+---
+
+## Troubleshooting & Common Gotchas
+
+| Error / Symptom | Root Cause | Fix |
+|---|---|---|
+| `bind: address already in use :8080` | Another process is holding port `8080`. | Run `lsof -i :8080` and terminate the zombie process, or change `SERVICE_PORT=8081`. |
+| `FATAL: role "postgres" does not exist` | Docker volume initialized with stale credentials. | Run `docker compose down -v` to reset local volumes. |
+| `ECONNREFUSED 127.0.0.1:5432` | PostgreSQL is still warming up. | Wait 5 seconds for healthcheck or inspect `docker compose logs postgres`. |
+
+---
+
+## Next Steps
+
+- Link: How-To: Rotate Staging API Keys -> operations/rotate-secrets.md
+- Link: Service Catalog: Payment Service -> services/payment-service.md
+- Link: Architecture ADR: Database Selection -> architecture/0001-use-postgres.md
