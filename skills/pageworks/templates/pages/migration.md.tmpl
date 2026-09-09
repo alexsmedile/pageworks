@@ -1,0 +1,108 @@
+---
+title: <Migrating from vX to vY — e.g., "Migrating from SDK v1 to v2">
+description: <One-sentence summary of breaking changes, deprecations, and target upgrade scope>
+section: <section-id>
+type: migration
+status: draft
+owner: <team-or-role — e.g., "@platform-core">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+since: <Target-Version — e.g., "2.0.0">
+---
+
+# <Migrating from vX to vY>
+
+<Punchline: Upgrade your services from v1 to v2 with zero runtime downtime in under 15 minutes by replacing deprecated configuration keys and updating client initialization.>
+
+> [!IMPORTANT]
+> **Breaking Changes Summary**:
+> - Replaced legacy `auth_token` parameter with Bearer token header in `ClientConfig`.
+> - Deprecated REST endpoint `/v1/events` in favor of streaming WebSocket pipeline.
+> - Bumped minimum runtime requirement to Node 20 LTS or Python 3.11+.
+
+---
+
+## Upgrade Readiness Checklist
+
+- [ ] Verify test suite passes on existing version (`npm test` or `pytest`).
+- [ ] Ensure all deprecated API usage warnings are resolved.
+- [ ] Audit dependencies for ecosystem compatibility.
+
+---
+
+## Step-by-Step Migration
+
+### Step 1 — Bump Package Dependencies
+
+Update your package manifest to the latest release:
+
+```bash
+# Node.js
+npm install @org/sdk@^2.0.0
+
+# Python
+pip install --upgrade "org-sdk>=2.0.0,<3.0.0"
+```
+
+---
+
+### Step 2 — Code Transformations (Before / After)
+
+Replace deprecated initialization signatures with the unified configuration object.
+
+#### Client Initialization
+
+**Legacy (v1):**
+```typescript
+// Deprecated v1 pattern
+import { Client } from '@org/sdk';
+
+const client = new Client('my-api-key', 'https://api.v1.org');
+await client.connect();
+```
+
+**Modern (v2):**
+```typescript
+// Modern v2 pattern
+import { createClient } from '@org/sdk';
+
+const client = createClient({
+  apiKey: process.env.ORG_API_KEY,
+  endpoint: 'https://api.v2.org',
+  retryPolicy: { maxRetries: 3, backoffMs: 250 },
+});
+await client.connect();
+```
+
+---
+
+### Step 3 — Configuration Key Mapping
+
+| Legacy Key (v1) | Replacement Key (v2) | Type | Migration Notes |
+|---|---|---|---|
+| `auth_token` | `credentials.apiKey` | String | Now read from structured credentials block |
+| `timeout_sec` | `timeoutMs` | Integer | Converted from seconds to milliseconds |
+| `use_ssl` | `tls.enabled` | Boolean | Defaults to `true` |
+
+---
+
+## Verification & Rollback
+
+### Automated Verification Command
+Run the integration test suite targeting the migration changes:
+
+```bash
+npm run test:e2e -- --grep="v2-upgrade"
+```
+
+```
+✓ 12 integration tests passing (420ms)
+```
+
+### Rollback Plan
+If unexpected runtime regressions emerge, revert the package pin:
+
+```bash
+npm install @org/sdk@1.9.4 --save-exact
+git checkout HEAD~1 package.json package-lock.json
+```

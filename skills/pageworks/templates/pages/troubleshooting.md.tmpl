@@ -1,0 +1,71 @@
+---
+title: <Troubleshooting & Gotchas — e.g., "Troubleshooting Authentication & Tokens">
+description: <One-sentence summary of symptoms and recovery procedures covered>
+section: <section-id>
+type: troubleshooting
+status: draft
+owner: <team-or-role — e.g., "@platform-sec">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+---
+
+# <Troubleshooting & Gotchas>
+
+<Punchline: Quick-reference diagnostic commands and symptom-to-fix tables to resolve authentication errors, expired tokens, and network timeouts in under 2 minutes.>
+
+> [!TIP]
+> **First Diagnostic Check**: Before troubleshooting deeper, verify connectivity and active identity:
+> ```bash
+> curl -sSf https://api.internal/healthz && auth-cli whoami
+> ```
+
+---
+
+## Symptom, Cause & Resolution Matrix
+
+| Symptom / Error Message | Probable Root Cause | Resolution / Fix |
+|---|---|---|
+| `401 Unauthorized: token_expired` | Access token exceeded 60-minute TTL. | Run `auth-cli refresh` to mint a fresh JWT, or verify client clock skew. |
+| `403 Forbidden: insufficient_scope` | Token lacks `write:deployments` role. | Request role elevation in `#access-mgmt` and verify via `auth-cli inspect --token $TOKEN`. |
+| `504 Gateway Timeout on /v2/query` | Connection pool saturation under load. | Increase max pool size in `config.yaml` (`pool_size: 50`) and scale worker replicas. |
+| `EADDRINUSE: port 8080` | Stale orphan process holding the port. | Execute `lsof -ti:8080 | xargs kill -9` and restart the local dev server. |
+
+---
+
+## Common Gotchas & Traps
+
+### 1. Clock Skew in Local Containers
+**Gotcha**: Docker container system time drifts behind host OS during sleep mode, causing JWT tokens minted by the host to fail signature validation inside containers.
+
+**Fix**:
+Restart Docker engine or sync container time:
+```bash
+docker run --rm --privileged alpine hwclock -s
+```
+
+---
+
+### 2. Header Name Normalization
+**Gotcha**: HTTP/2 strictly normalizes all headers to lowercase (`authorization` vs `Authorization`), which causes legacy case-sensitive header parsers to fail.
+
+**Fix**:
+Use case-insensitive header getters:
+```python
+# Avoid: request.headers['Authorization']
+# Correct:
+auth_header = request.headers.get('authorization', '')
+```
+
+---
+
+## Deep Diagnostic Commands
+
+When automated resolution fails, capture a diagnostic trace:
+
+```bash
+# Dump active connection health and latency metrics
+auth-cli diagnose --verbose --output=json > auth-diag.json
+
+# Check Kubernetes endpoint mesh health
+kubectl get endpoints auth-service -n production -o wide
+```

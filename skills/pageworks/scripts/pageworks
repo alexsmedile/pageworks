@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ── constants ────────────────────────────────────────────────────────────────
-PAGEWORKS_VERSION="0.3.0"
+PAGEWORKS_VERSION="0.4.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TODAY="$(date +%Y-%m-%d)"
 
@@ -69,13 +69,14 @@ CLI verbs (mutate docs/):
                                        --platform          Alias for --preset platform (6 categories)
                                        --name <slug>       Override project name
   export <renderer> [opts]            Generate renderer config from docs.yaml
-                                       Renderers: mkdocs | docusaurus
+                                       Renderers: mkdocs | docusaurus | mintlify
                                        Options:
                                          --out <path>   Override default output location
                                          --force        Overwrite existing files
                                          --no-workflow  Skip GitHub Pages workflow
   doctor [--fix]                      Validate docs/ — schema, frontmatter, links, freshness, depth
                                        --fix applies mechanical repairs
+  touch <page>                        Update last_reviewed timestamp to today (acknowledge freshness)
 
 Skill verbs (run via /pageworks in your AI agent):
   new <page>                          Scaffold a page (asks for class format + section)
@@ -635,11 +636,13 @@ docs_export_docusaurus() {
   site_tagline="$(docs_yaml_scalar "$manifest" "site.tagline")"
   site_url="$(docs_yaml_scalar "$manifest" "site.base_url")"
 
-  local org_name proj_name preset
+  local org_name proj_name preset repo_url
   org_name="$(docs_yaml_renderer_scalar "$manifest" "docusaurus" "organizationName")"
   proj_name="$(docs_yaml_renderer_scalar "$manifest" "docusaurus" "projectName")"
   preset="$(docs_yaml_renderer_scalar "$manifest" "docusaurus" "preset")"
   [[ -z "$preset" ]] && preset="classic"
+  repo_url="$(docs_yaml_renderer_scalar "$manifest" "docusaurus" "repo_url")"
+  [[ -z "$repo_url" ]] && repo_url="$(docs_yaml_renderer_scalar "$manifest" "mkdocs" "repo_url")"
 
   local du_url="https://example.com" du_base="/"
   if [[ -n "$site_url" ]]; then
@@ -695,7 +698,11 @@ module.exports = {
 "
   [[ -n "$proj_name" ]] && config_content+="  projectName: '${proj_name}',
 "
-  config_content+="  presets: [
+  config_content+="  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
+  presets: [
     ['${preset}', {
       docs: {
         sidebarPath: require.resolve('./sidebars.js'),
@@ -709,7 +716,18 @@ module.exports = {
   themeConfig: {
     navbar: {
       title: '${site_name//\'/\\\'}',
-    },
+"
+  if [[ -n "$repo_url" ]]; then
+    config_content+="      items: [
+        {
+          href: '${repo_url}',
+          label: 'GitHub',
+          position: 'right',
+        },
+      ],
+"
+  fi
+  config_content+="    },
   },
 };
 "
@@ -740,6 +758,7 @@ ${sidebar_items}  ],
   \"dependencies\": {
     \"@docusaurus/core\": \"^3.0.0\",
     \"@docusaurus/preset-classic\": \"^3.0.0\",
+    \"@docusaurus/theme-mermaid\": \"^3.0.0\",
     \"clsx\": \"^2.0.0\",
     \"react\": \"^18.0.0\",
     \"react-dom\": \"^18.0.0\"
@@ -774,6 +793,126 @@ ${sidebar_items}  ],
 "
     docs_write_adapter_file "$css_file" "$css_content"
   fi
+}
+
+# ── adapter: mintlify ──
+docs_export_mintlify() {
+  local manifest="$1" out_dir="$2"
+  local site_name site_tagline site_url
+  site_name="$(docs_yaml_scalar "$manifest" "site.name")"
+  site_tagline="$(docs_yaml_scalar "$manifest" "site.tagline")"
+  site_url="$(docs_yaml_scalar "$manifest" "site.base_url")"
+
+  local primary light dark repo_url
+  primary="$(docs_yaml_renderer_scalar "$manifest" "mintlify" "primary")"
+  [[ -z "$primary" ]] && primary="#4F46E5"
+  light="$(docs_yaml_renderer_scalar "$manifest" "mintlify" "light")"
+  [[ -z "$light" ]] && light="#6366F1"
+  dark="$(docs_yaml_renderer_scalar "$manifest" "mintlify" "dark")"
+  [[ -z "$dark" ]] && dark="#4338CA"
+  repo_url="$(docs_yaml_renderer_scalar "$manifest" "mintlify" "repo_url")"
+  [[ -z "$repo_url" ]] && repo_url="${site_url:-https://github.com/org/${site_name:-docs}}"
+
+  local nav_groups=""
+  local first_group=true
+
+  if [[ -f "docs/index.md" ]]; then
+    first_group=false
+    nav_groups+="    {
+      \"group\": \"Overview\",
+      \"pages\": [
+        \"docs/index\"
+      ]
+    }"
+  fi
+
+  while IFS=$'\t' read -r sec_id sec_title sec_order sec_pages; do
+    [[ -z "$sec_id" ]] && continue
+    [[ -z "$sec_pages" ]] && continue
+    if $first_group; then
+      first_group=false
+    else
+      nav_groups+=",
+"
+    fi
+    nav_groups+="    {
+      \"group\": \"${sec_title//\"/\\\"}\",
+      \"pages\": ["
+    IFS=',' read -r -a page_arr <<< "$sec_pages"
+    local first_page=true
+    for page in "${page_arr[@]}"; do
+      [[ -z "$page" ]] && continue
+      if $first_page; then
+        first_page=false
+      else
+        nav_groups+=", "
+      fi
+      nav_groups+="\"docs/${sec_id}/${page}\""
+    done
+    nav_groups+="]
+    }"
+  done < <(docs_yaml_sections "$manifest")
+
+  while IFS= read -r extra; do
+    [[ -z "$extra" ]] && continue
+    if $first_group; then
+      first_group=false
+    else
+      nav_groups+=",
+"
+    fi
+    local extra_file="docs/${extra}.md"
+    local extra_title
+    extra_title="$(docs_page_title "$extra_file" "$extra")"
+    nav_groups+="    {
+      \"group\": \"${extra_title//\"/\\\"}\",
+      \"pages\": [\"docs/${extra}\"]
+    }"
+  done < <(docs_yaml_extras "$manifest")
+
+  local mint_file="${out_dir%/}/mint.json"
+  local mint_content="{
+  \"\$schema\": \"https://mintlify.com/schema.json\",
+  \"name\": \"${site_name//\"/\\\"}\",
+  \"logo\": {
+    \"dark\": \"/logo/dark.svg\",
+    \"light\": \"/logo/light.svg\"
+  },
+  \"favicon\": \"/favicon.svg\",
+  \"colors\": {
+    \"primary\": \"${primary}\",
+    \"light\": \"${light}\",
+    \"dark\": \"${dark}\",
+    \"anchors\": {
+      \"from\": \"${primary}\",
+      \"to\": \"${light}\"
+    }
+  },
+  \"topbarLinks\": [
+    {
+      \"name\": \"Documentation\",
+      \"url\": \"${repo_url}\"
+    }
+  ],
+  \"topbarCtaButton\": {
+    \"name\": \"GitHub\",
+    \"url\": \"${repo_url}\"
+  },
+  \"tabs\": [
+    {
+      \"name\": \"Documentation\",
+      \"url\": \"docs\"
+    }
+  ],
+  \"navigation\": [
+${nav_groups}
+  ],
+  \"footerSocials\": {
+    \"github\": \"${repo_url}\"
+  }
+}
+"
+  docs_write_adapter_file "$mint_file" "$mint_content"
 }
 
 # ── GitHub Pages workflow writer ──
@@ -830,7 +969,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 "
-  else
+  elif [[ "$renderer" == "docusaurus" ]]; then
     wf_content="# Generated by pageworks export docusaurus
 name: Deploy docs (Docusaurus)
 on:
@@ -860,7 +999,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
+      - run: npm ci || npm install
       - run: npx docusaurus build
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
@@ -877,6 +1016,31 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+"
+  elif [[ "$renderer" == "mintlify" ]]; then
+    wf_file="${out_dir%/}/.github/workflows/docs-mintlify.yml"
+    wf_content="# Generated by pageworks export mintlify
+name: Validate Mintlify Docs
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'mint.json', '.github/workflows/docs-mintlify.yml']
+  pull_request:
+    branches: [main]
+    paths: ['docs/**', 'mint.json', '.github/workflows/docs-mintlify.yml']
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Mintlify Link & Syntax Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate Broken Links
+        run: npx mintlify broken-links
 "
   fi
   docs_write_adapter_file "$wf_file" "$wf_content"
@@ -899,18 +1063,18 @@ cmd_export() {
         out_dir="${1#--out=}"; shift ;;
       --force)       DOCS_EXPORT_FORCE=true; shift ;;
       --no-workflow) no_workflow=true; shift ;;
-      mkdocs|docusaurus)
+      mkdocs|docusaurus|mintlify)
         [[ -n "$renderer" ]] && die "Multiple renderers given: '$renderer' and '$1'. Run one at a time."
         renderer="$1"; shift ;;
-      mintlify|fumadocs)
+      fumadocs)
         die "Renderer '$1' is not shipped — community contributions welcome. See references/renderers.md § Contributing a renderer."
         ;;
       -*) die "Unknown export option: '$1'" ;;
-      *)  die "Unknown renderer: '$1'. Supported: mkdocs, docusaurus." ;;
+      *)  die "Unknown renderer: '$1'. Supported: mkdocs, docusaurus, mintlify." ;;
     esac
   done
 
-  [[ -z "$renderer" ]] && die "export requires a renderer. Usage: pageworks export <mkdocs|docusaurus> [--out path] [--force]"
+  [[ -z "$renderer" ]] && die "export requires a renderer. Usage: pageworks export <mkdocs|docusaurus|mintlify> [--out path] [--force]"
 
   local manifest="docs/docs.yaml"
   [[ -f "$manifest" ]] || die "docs/docs.yaml not found. Run 'pageworks init' first."
@@ -926,6 +1090,7 @@ cmd_export() {
   case "$renderer" in
     mkdocs)     docs_export_mkdocs     "$manifest" "$out_dir" ;;
     docusaurus) docs_export_docusaurus "$manifest" "$out_dir" ;;
+    mintlify)   docs_export_mintlify   "$manifest" "$out_dir" ;;
   esac
 
   if ! $no_workflow; then
@@ -941,11 +1106,15 @@ cmd_export() {
     if [[ "$renderer" == "mkdocs" ]]; then
       echo "  1. pip install mkdocs mkdocs-material"
       echo "  2. mkdocs serve                      # local preview at http://127.0.0.1:8000"
-    else
+    elif [[ "$renderer" == "docusaurus" ]]; then
       echo "  1. npm init -y && npm install @docusaurus/core @docusaurus/preset-classic react react-dom"
       echo "  2. npx docusaurus start              # local preview at http://localhost:3000"
+    elif [[ "$renderer" == "mintlify" ]]; then
+      echo "  1. npm i -g mintlify (or use npx)"
+      echo "  2. npx mintlify dev                  # local preview at http://localhost:3000"
+      echo "  3. Deploy: connect repository to Mintlify dashboard (https://dashboard.mintlify.com)"
     fi
-    if ! $no_workflow; then
+    if ! $no_workflow && [[ "$renderer" != "mintlify" ]]; then
       echo "  3. Settings → Pages → Source = GitHub Actions"
       echo "  4. Commit + push to main — the workflow deploys automatically"
     fi
@@ -954,13 +1123,22 @@ cmd_export() {
   fi
 }
 
-# ── sync-ack ────────────────────────────────────────────────────────────────
-cmd_sync_ack() {
+# ── touch ───────────────────────────────────────────────────────────────────
+cmd_touch() {
   local target="${1:-}"
-  [[ -z "$target" ]] && die "Usage: pageworks sync-ack <path/to/page.md>"
-  [[ -f "$target" ]] || target="docs/${target}"
-  [[ -f "$target" ]] || target="docs/${target}.md"
-  [[ -f "$target" ]] || die "File not found: '$1'"
+  [[ -z "$target" ]] && die "Usage: pageworks touch <path/to/page.md>"
+
+  if [[ ! -f "$target" ]]; then
+    if [[ -f "${target}.md" ]]; then
+      target="${target}.md"
+    elif [[ -f "docs/${target}" ]]; then
+      target="docs/${target}"
+    elif [[ -f "docs/${target}.md" ]]; then
+      target="docs/${target}.md"
+    else
+      die "File not found: '$1'"
+    fi
+  fi
 
   if grep -qE '^last_reviewed:' "$target"; then
     awk -v today="$TODAY" '
@@ -976,7 +1154,7 @@ cmd_sync_ack() {
       { print }
     ' "$target" > "${target}.tmp" && mv "${target}.tmp" "$target"
   fi
-  echo "  ✓ Acknowledged freshness: ${target} → last_reviewed: ${TODAY}"
+  echo "  ✓ Touched review timestamp: ${target} → last_reviewed: ${TODAY}"
 }
 
 # ── doctor ──────────────────────────────────────────────────────────────────
@@ -1042,7 +1220,7 @@ cmd_doctor() {
         "convert list items to map keys: 'renderers:\\n  mkdocs: ...'"
     else
       doctor_emit "pass" "$manifest" "renderers: block present (valid map)"
-      local known_renderers="mkdocs docusaurus"
+      local known_renderers="mkdocs docusaurus mintlify"
       local renderer_keys
       renderer_keys=$(awk '
         /^renderers:/ { in_block=1; next }
@@ -1163,7 +1341,7 @@ cmd_doctor() {
 
   # Frontmatter & Content validation
   local required_fields="title description section status updated"
-  local valid_classes="tutorial how-to reference explanation adr service-catalog runbook postmortem"
+  local valid_classes="tutorial how-to reference explanation adr service-catalog runbook postmortem migration troubleshooting cookbook design-spec guide spec overview"
   
   shopt -s nullglob
   for page_file in "$docs_dir"/*.md "$docs_dir"/*/*.md; do
@@ -1232,15 +1410,14 @@ $(cat "$page_file")"
       fi
     done
 
-    # Type field check (info if missing, warning if unknown)
+    # Type field check (info if missing, info for custom types — classes are an extensible baseline)
     if ! echo "$fm" | grep -qE "^type:"; then
-      doctor_emit "info" "$page_file" "missing 'type:' frontmatter (Diátaxis / 6 Core Classes: tutorial|how-to|reference|explanation|adr|service-catalog|runbook|postmortem)"
+      doctor_emit "info" "$page_file" "missing 'type:' frontmatter (recommended baseline: tutorial|how-to|reference|explanation|adr|service-catalog|runbook|postmortem|migration|troubleshooting|cookbook|design-spec)"
     else
       local ptype
       ptype=$(echo "$fm" | awk '/^type:/ { sub(/^type:[[:space:]]*/, ""); sub(/[[:space:]]*#.*$/, ""); gsub(/^["'\'']|["'\'']$/, ""); print; exit }')
       if [[ -n "$ptype" ]] && ! in_list "$ptype" "$valid_classes"; then
-        doctor_emit "warning" "$page_file" "unrecognized type '${ptype}'" \
-          "use one of: ${valid_classes}"
+        doctor_emit "info" "$page_file" "custom page type '${ptype}' declared (extensible baseline: tutorial|how-to|reference|explanation|adr|service-catalog|runbook|postmortem|migration|troubleshooting|cookbook|design-spec)"
       fi
     fi
 
@@ -1260,7 +1437,47 @@ $(cat "$page_file")"
       ')
       if (( days_old > 180 )); then
         doctor_emit "warning" "$page_file" "content has not been reviewed in > 180 days (${days_old} days old — stale)" \
-          "verify accuracy against current code and update 'last_reviewed: ${TODAY}' or run 'pageworks sync-ack'"
+          "verify accuracy against current code and update 'last_reviewed: ${TODAY}' or run 'pageworks touch ${page_file}'"
+      fi
+    fi
+
+    # Layer 1 Mechanical Drift Check: synced_from:
+    local synced_path
+    synced_path=$(echo "$fm" | awk '/^synced_from:/ { sub(/^synced_from:[[:space:]]*/, ""); sub(/[[:space:]]*#.*$/, ""); gsub(/^["'\'']|["'\'']$/, ""); print; exit }')
+    if [[ -n "$synced_path" ]]; then
+      local page_dir_base
+      page_dir_base="$(dirname "$page_file")"
+      local synced_resolved
+      if [[ "$synced_path" == /* ]]; then
+        synced_resolved=".${synced_path}"
+      else
+        synced_resolved="${page_dir_base}/${synced_path}"
+      fi
+
+      if [[ ! -e "$synced_resolved" ]]; then
+        doctor_emit "error" "$page_file" "synced_from target '${synced_path}' does not exist on disk" \
+          "verify path or remove 'synced_from:' in frontmatter"
+      else
+        if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
+          local upstream_date
+          upstream_date=$(git log -1 --format=%cs -- "$synced_resolved" 2>/dev/null || true)
+          if [[ -n "$upstream_date" && -n "$last_rev" && "$last_rev" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            local drift_days
+            drift_days=$(awk -v up="$upstream_date" -v rev="$last_rev" '
+              function to_days(ymd,  arr, y, m, d) {
+                split(ymd, arr, "-")
+                y = arr[1] + 0; m = arr[2] + 0; d = arr[3] + 0
+                if (m <= 2) { y -= 1; m += 12 }
+                return int(365.25 * y) + int(30.6001 * (m + 1)) + d
+              }
+              BEGIN { print to_days(up) - to_days(rev) }
+            ')
+            if (( drift_days > 0 )); then
+              doctor_emit "warning" "$page_file" "upstream source '${synced_path}' modified in git since last review (${drift_days} day(s) drift)" \
+                "reconcile page content with upstream changes, then run 'pageworks touch ${page_file}'"
+            fi
+          fi
+        fi
       fi
     fi
 
@@ -1332,14 +1549,16 @@ main() {
     init)     shift; cmd_init     "$@" ;;
     export)   shift; cmd_export   "$@" ;;
     doctor)   shift; cmd_doctor   "$@" ;;
-    sync-ack) shift; cmd_sync_ack "$@" ;;
+    touch)    shift; cmd_touch    "$@" ;;
+    ack)      shift; cmd_touch    "$@" ;;
+    sync-ack) shift; cmd_touch    "$@" ;;
     new)
       shift
-      skill_verb_message "new" "Scaffolds a page (asks for 6 Core Classes format + section + title)."
+      skill_verb_message "new" "Scaffolds a page from the extensible baseline (asks for class format + section + title)."
       ;;
     review)
       shift
-      skill_verb_message "review" "Quality gate — format fit, prose patterns, structure, freshness."
+      skill_verb_message "review <page>" "Micro quality gate — evaluates single page prose, Diátaxis quadrant fit, runnable snippets, and formatting."
       ;;
     status)
       shift
@@ -1347,11 +1566,11 @@ main() {
       ;;
     audit)
       shift
-      skill_verb_message "audit" "Drift detection — 180-day stale pages, broken links, spec-sync gaps."
+      skill_verb_message "audit" "Macro drift detection — audits entire docs/ tree for 180-day staleness, broken links, and upstream git drift."
       ;;
     *)
       die "Unknown command: '${subcmd}'.
-CLI verbs:   init | export | doctor
+CLI verbs:   init | export | doctor | touch
 Skill verbs (run via /pageworks in your AI agent): new | review | status | audit
 Run 'pageworks --help' for usage."
       ;;

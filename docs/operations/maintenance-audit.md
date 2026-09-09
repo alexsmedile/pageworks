@@ -31,7 +31,7 @@ Look for warnings:
 2. Test commands against current code.
 3. If valid, acknowledge freshness in one command:
    ```bash
-   pageworks sync-ack docs/services/legacy-auth.md
+   pageworks touch docs/services/legacy-auth.md
    ```
 4. If outdated, update prose and examples before bumping the date.
 

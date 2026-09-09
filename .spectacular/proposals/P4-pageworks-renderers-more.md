@@ -19,6 +19,9 @@ target_contract: Contract:01a026aa-936a-7fa4-b79e-d399ce47a476
 Add first-class export adapters for popular modern documentation generators beyond MkDocs and Docusaurus.
 
 ## Target Adapters
-- **Mintlify**: Generate `mint.json` with grouped navigation, tabs, and theme configuration.
-- **Fumadocs**: Generate Next.js / Contentlayer structure, source configuration, and metadata.
+- **Mintlify** (Delivered in v0.3.0):
+  - Generate `mint.json` with grouped navigation, tabs, theme colors, topbar, and footer links from `docs.yaml`.
+  - Generate `.github/workflows/docs-mintlify.yml` with `npx mintlify broken-links` CI step.
+- **Fumadocs** (Planned): Generate Next.js / Contentlayer structure, source configuration, and metadata.
 - Extension guide for third-party community adapters.
+

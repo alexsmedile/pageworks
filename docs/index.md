@@ -11,7 +11,7 @@ updated: 2026-08-22
 
 # Pageworks Documentation
 
-Welcome to the **Pageworks** software and platform documentation. Pageworks is an AI agent skill and CLI tool designed to own a project's public-facing documentation surface (`docs/`) end-to-end: scaffold, schema, authoring, renderer export (MkDocs Material, Docusaurus v3+, Docker), and 180-day stale-page drift maintenance.
+Welcome to the **Pageworks** software and platform documentation. Pageworks is an AI agent skill and CLI tool designed to own a project's public-facing documentation surface (`docs/`) end-to-end: scaffold, schema, authoring, renderer export (MkDocs Material, Docusaurus v3+, Mintlify, Docker), and Dual-Layer stale-page drift maintenance.
 
 ## System Overview & Ownership
 

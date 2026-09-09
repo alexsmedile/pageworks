@@ -1,46 +1,54 @@
 ---
 name: pageworks
 description: |
-  Public-facing software & platform documentation skill — owns the docs/ surface end-to-end:
-  Dual-Dimension Architecture (6 Page Classes & 6 Topic Categories), scaffold, schema,
-  page authoring, renderer export (MkDocs Material, Docusaurus v3+, Docker), and 180-day
-  stale-page drift maintenance.
+  Author, inspect, audit, and export public-facing software documentation in docs/ using the
+  Dual-Dimension Architecture (extensible page classes + 6 topic categories). Triggers on: "init docs",
+  "scaffold documentation", "create tutorial", "new ADR", "add runbook", "review docs", "audit stale documentation",
+  "docs drift", "pageworks touch", "pageworks doctor", "export to MkDocs/Docusaurus/Mintlify".
+  Do NOT trigger for repository README.md, work-item tracking docs (CHANGELOG.md, TODO.md), or code docstrings.
 compatibility: "spectacular >= 2.0.0"
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   category: "devtools"
   status: "published"
-  tags: "documentation, docs, mkdocs, docusaurus, wiki, diataxis"
+  tags: "documentation, docs, mkdocs, docusaurus, mintlify, wiki, diataxis"
 ---
 
 # Pageworks
 
-Orchestrator for public-facing software & platform documentation (`docs/`).
+Orchestrator for public-facing software & platform documentation (`docs/`). Standalone skill package with bundled deterministic scripts.
 
 ## 1. Quick Guard & Off-Switch
 
 Run mechanical health checks via the bundled script:
 ```bash
-bash "${PAGWORKS_SKILL_DIR:-skills/pageworks}/scripts/pageworks" doctor
+bash "${PAGEWORKS_SKILL_DIR:-skills/pageworks}/scripts/pageworks" doctor
 ```
 
 ## 2. Operation Routing Matrix
 
-| Operation | User Intent / Trigger | Action & Reference |
-|---|---|---|
-| `init` | Scaffold fresh docs tree (`--preset platform`) | Load [references/contract.md](references/contract.md) $\to$ run `scripts/pageworks init` |
-| `new` | Scaffold new page from 6 Core Classes | Load [references/authoring.md](references/authoring.md) + [references/page-types.md](references/page-types.md) |
-| `review` | Quality gate: prose, components, portal UI | Load [references/authoring.md](references/authoring.md) + [references/wiki-patterns.md](references/wiki-patterns.md) |
-| `export` | Export to MkDocs, Docusaurus, or Docker | Load [references/renderers.md](references/renderers.md) $\to$ run `scripts/pageworks export` |
-| `doctor` | Validate schema, links, depth, frontmatter | Load [references/contract.md](references/contract.md) $\to$ run `scripts/pageworks doctor [--fix]` |
-| `status` | Inventory briefing across 6 categories | Load [references/contract.md](references/contract.md) $\to$ report section state |
-| `audit` | 180-day stale review & upstream spec drift | Load [references/maintenance.md](references/maintenance.md) $\to$ audit `synced_from:` |
+| Operation | Scope & Type | Natural Language User Intent / Trigger Phrases | Action & Reference Loaded |
+|---|---|---|---|
+| `init` | CLI / Engine | *"Start docs", "Scaffold documentation", "Setup wiki", "pageworks init --preset platform"* | Load [references/contract.md](references/contract.md) $\to$ run `bash "${PAGEWORKS_SKILL_DIR:-skills/pageworks}/scripts/pageworks" init` |
+| `new <page>` | Skill / Authoring | *"Create a tutorial", "Add runbook for secret rotation", "New ADR", "Add troubleshooting guide", "Scaffold cookbook page"* | Load [references/authoring.md](references/authoring.md) + [references/page-types.md](references/page-types.md) |
+| `review <page>` | **Micro Quality Gate**<br>(Single Page) | *"Review this draft", "Check this page for clarity", "Improve the tone of this guide", "Check runnable code snippets", "Review ADR"* | Load [references/authoring.md](references/authoring.md) + [references/quality-gates.md](references/quality-gates.md) + [references/prose-patterns.md](references/prose-patterns.md) |
+| `audit` | **Macro Health & Drift**<br>(Entire Docs Surface) | *"Are my docs out of date?", "Audit stale pages", "Check drift against codebase", "Did upstream code change?", "Run drift audit"* | Load [references/maintenance.md](references/maintenance.md) + [references/contract.md](references/contract.md) $\to$ audit `synced_from:` & 180-day staleness |
+| `doctor [--fix]` | CLI / Mechanical | *"Are my docs broken?", "Check frontmatter errors", "Validate internal links", "Check folder depth", "Run doctor", "Fix docs errors"* | Load [references/contract.md](references/contract.md) $\to$ run `bash "${PAGEWORKS_SKILL_DIR:-skills/pageworks}/scripts/pageworks" doctor [--fix]` |
+| `touch <page>` | CLI / Freshness | *"Mark as reviewed", "Reset staleness clock", "Acknowledge doc review", "Page is still accurate", "pageworks touch <page>"* | Run `bash "${PAGEWORKS_SKILL_DIR:-skills/pageworks}/scripts/pageworks" touch <page>` (updates `last_reviewed:` to today) |
+| `status` | Skill / Inventory | *"How many docs do we have?", "Docs status", "Show documentation inventory", "List unreviewed drafts"* | Load [references/contract.md](references/contract.md) $\to$ report section & category state |
+| `theme` | Skill / Design | *"Customize docs theme", "Change docs colors", "Designer mode", "Nordic cyan theme", "Stripe indigo preset"* | Load [references/designer-mode.md](references/designer-mode.md) $\to$ configure palette & custom CSS variables |
+| `export <renderer>` | CLI / Generator | *"Build docs site", "Setup MkDocs", "Export to Docusaurus", "Generate mint.json", "Setup Mintlify", "Generate mkdocs.yml", "Docker preview"* | Load [references/renderers.md](references/renderers.md) $\to$ run `bash "${PAGEWORKS_SKILL_DIR:-skills/pageworks}/scripts/pageworks" export` |
+
+> [!NOTE]
+> **Micro (`review`) vs. Macro (`audit`)**:
+> - **`review <page>`** is a **micro-inspection** of a single page: prose clarity, tone, Diátaxis quadrant fit, alert formatting, and copy-paste runnable snippet verification.
+> - **`audit`** is a **macro-scan** across the entire documentation tree: flagging 180-day stale pages, broken cross-links, and upstream git drift on `synced_from:` targets.
 
 ## 3. The Dual-Dimension Architecture
 
-- **6 Page Classes**: `tutorial`, `how-to`, `adr`, `reference`, `service-catalog`, `postmortem` (plus `explanation`).
+- **Extensible Page Classes**: Core baseline (`tutorial`, `how-to`, `adr`, `reference`, `service-catalog`, `postmortem`, `explanation`) + extended formats (`migration`, `troubleshooting`, `cookbook`, `design-spec`) + domain custom types.
 - **6 Topic Categories**: `getting-started/`, `architecture/`, `services/`, `operations/`, `reference/`, `standards/`.
-- **Governance**: Shallow hierarchy ($\le 3$ levels), explicit `owner:`, and 180-day review cycles.
+- **Governance**: Shallow hierarchy ($\le 3$ levels), explicit `owner:`, and Dual-Layer drift maintenance (Layer 1 Mechanical in CI/Doctor + Layer 2 Skill-Driven Semantic Review in Agent).
 
 ## 4. Report Format
 

@@ -4,11 +4,11 @@
 
 **Write docs that don't rot — Dual-Dimension Software Wiki & Renderer Pipelines**
 
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Claude%20%7C%20Codex%20%7C%20Antigravity-orange.svg)](#install)
 [![CI Quality Gate](https://img.shields.io/badge/CI%20Quality-5--Layer%20Automated-brightgreen.svg)](#-5-layer-automated-ci-quality-gates)
-[![Tests](https://img.shields.io/badge/tests-180%20passing-success.svg)](#-test-harness)
+[![Tests](https://img.shields.io/badge/tests-216%20passing-success.svg)](#-test-harness)
 
 <p align="center">
   <a href="#-why-pageworks">Why Pageworks</a> •

@@ -23,14 +23,14 @@ Scaffolds a documentation tree in `docs/`.
 
 ---
 
-## `pageworks export <mkdocs|docusaurus>`
+## `pageworks export <mkdocs|docusaurus|mintlify>`
 
 Generates renderer-specific configuration files and CI/CD deployment workflows.
 
 ### Options
 - `--out <path>`: Output destination directory (default: `.`).
 - `--force`: Overwrites existing configuration files (unless pinned with `do-not-overwrite`).
-- `--no-workflow`: Skips generating `.github/workflows/docs.yml`.
+- `--no-workflow`: Skips generating `.github/workflows/docs*.yml`.
 
 ---
 
@@ -43,10 +43,12 @@ Validates schema, frontmatter fields, orphan pages, 180-day staleness, broken ma
 
 ---
 
-## `pageworks sync-ack <page>`
+## `pageworks touch <page>`
 
 Acknowledges freshness on an audited page by updating `last_reviewed: <TODAY>` in frontmatter.
+Aliases: `ack`, `sync-ack`.
 
 ### Arguments
-- `<page>`: Relative or absolute path to page (e.g. `getting-started/install` or `docs/services/auth.md`).
+- `<page>`: Relative or absolute path to page (e.g. `install`, `getting-started/install`, or `docs/services/cli.md`).
+
 

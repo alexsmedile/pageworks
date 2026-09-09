@@ -122,13 +122,13 @@ synced_from: ../../../.spectacular/contracts/CC-cli.md
 | `title` | yes | Display title; doctor warns if absent and falls back to first H1. |
 | `description` | yes | 1–2 sentences; used for navigation previews and search summaries. |
 | `section` | yes | Must match a section `id` in `docs.yaml`. `""` for top-level root pages. |
-| `type` | yes | One of the 6 Core Classes: `tutorial`, `how-to`, `reference`, `explanation`, `adr`, `service-catalog`, `runbook`, `postmortem`. |
+| `type` | yes | Extensible baseline: `tutorial`, `how-to`, `reference`, `explanation`, `adr`, `service-catalog`, `runbook`, `postmortem`, `migration`, `troubleshooting`, `cookbook`, `design-spec` (or custom). |
 | `status` | yes | `stable`, `draft`, `deprecated`, or `superseded` (for ADRs). |
 | `owner` | yes | Owning team, Slack channel, or lead (e.g. `@infra-team`, `#devops`). |
 | `last_reviewed`| recommended | ISO date (`YYYY-MM-DD`). Flags 180-day stale review warnings. |
 | `updated` | yes | ISO date (`YYYY-MM-DD`). Validated against file filesystem mtime. |
 | `since` | no | Version when page was introduced. |
-| `synced_from` | no | Relative path to internal spec/anchor for drift tracking. |
+| `synced_from` | no | Relative path to internal spec/anchor for Layer 1 mechanical drift tracking. |
 
 ---
 
@@ -140,13 +140,15 @@ synced_from: ../../../.spectacular/contracts/CC-cli.md
 | **error** | Declared page in `docs.yaml` missing from filesystem |
 | **error** | Page missing required frontmatter (`title`, `description`, `section`, `status`, `updated`) |
 | **error** | Broken internal Markdown link (link target does not exist on disk) |
+| **error** | `synced_from:` target does not exist on disk |
 | **error** | Folder hierarchy depth exceeds 3 levels |
 | **warning** | Missing `owner:` frontmatter field |
 | **warning** | Orphan Markdown file (present on disk but omitted from `docs.yaml`) |
 | **warning** | Stale content: `last_reviewed:` or `updated:` is older than 180 days |
-| **warning** | `updated:` is older than file filesystem mtime by $> 14$ days |
+| **warning** | Upstream source in `synced_from:` modified in git since last review (mechanical drift) |
 | **warning** | Unknown renderer key in `renderers:` block |
 | **info** | Page missing `type:` classification |
+| **info** | Custom page `type:` declared outside the baseline taxonomy |
 
 ### Mechanical Repairs (`pageworks doctor --fix`)
 

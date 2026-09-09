@@ -21,12 +21,13 @@ The `pageworks` CLI is a zero-dependency Bash executable handling mechanical doc
 | **Owning Team** | `@platform-core` |
 | **Source Path** | [`cli/pageworks`](https://github.com/alexsmedile/pageworks/blob/main/cli/pageworks) |
 | **Dependencies** | `bash 4+`, `awk`, `sed`, `grep`, `curl` |
-| **Primary Verbs** | `init`, `export`, `doctor` |
+| **Primary Verbs** | `init`, `export`, `doctor`, `touch` |
 
 ## Key Commands
 
 ```bash
 pageworks init --preset platform
 pageworks doctor
+pageworks touch getting-started/install
 pageworks export mkdocs
 ```

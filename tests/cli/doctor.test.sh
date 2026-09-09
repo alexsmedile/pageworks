@@ -395,6 +395,161 @@ scenario_16_doctor_fix_repairs() {
   rm -rf "$dir"
 }
 
+scenario_17_extended_classes_valid() {
+  echo "Scenario 17: extended classes pass clean without warnings"
+  local dir="/tmp/pageworks-doctor-test-17"
+  setup_docs "$dir"
+
+  for class_name in migration troubleshooting cookbook design-spec guide spec overview; do
+    cat > "$dir/docs/getting-started/quickstart.md" <<EOF
+---
+title: Quickstart
+description: Quickstart guide.
+section: getting-started
+type: ${class_name}
+status: stable
+owner: "@platform-core"
+last_reviewed: 2026-08-22
+updated: 2026-08-22
+---
+# Quickstart
+EOF
+    local output
+    output=$(run_cli "$dir" doctor 2>&1)
+    assert_not_contains "$output" "unrecognized type"
+    assert_contains "$output" "0 error(s)"
+  done
+
+  rm -rf "$dir"
+}
+
+scenario_18_custom_page_type_info() {
+  echo "Scenario 18: custom user-defined type emits info rather than warning"
+  local dir="/tmp/pageworks-doctor-test-18"
+  setup_docs "$dir"
+
+  cat > "$dir/docs/getting-started/quickstart.md" <<EOF
+---
+title: Quickstart
+description: Custom quickstart.
+section: getting-started
+type: interactive-lab
+status: stable
+owner: "@platform-core"
+last_reviewed: 2026-08-22
+updated: 2026-08-22
+---
+# Quickstart
+EOF
+
+  local output
+  output=$(run_cli "$dir" doctor 2>&1)
+  assert_contains "$output" "custom page type 'interactive-lab' declared"
+  assert_not_contains "$output" "unrecognized type"
+  assert_contains "$output" "0 warning(s)"
+
+  rm -rf "$dir"
+}
+
+scenario_19_synced_from_mechanical_drift() {
+  echo "Scenario 19: synced_from target validation and git drift detection"
+  local dir="/tmp/pageworks-doctor-test-19"
+  setup_docs "$dir"
+
+  # Part A: Missing target emits error
+  cat > "$dir/docs/getting-started/quickstart.md" <<EOF
+---
+title: Quickstart
+description: Quickstart.
+section: getting-started
+type: tutorial
+status: stable
+owner: "@platform-core"
+last_reviewed: 2026-08-22
+updated: 2026-08-22
+synced_from: ../../missing/spec.md
+---
+# Quickstart
+EOF
+
+  local output exit_code=0
+  if output=$(run_cli "$dir" doctor 2>&1); then exit_code=0; else exit_code=$?; fi
+  assert_exit "$exit_code" 1 "missing synced_from target exits 1"
+  assert_contains "$output" "synced_from target '../../missing/spec.md' does not exist on disk"
+
+  # Part B: Existing target in a real git repo with drift
+  (
+    cd "$dir"
+    git init -q
+    git config user.email "test@example.com"
+    git config user.name "Test Runner"
+    mkdir -p specs
+    echo "spec content" > specs/api.yaml
+    git add .
+    git commit -q -m "initial commit"
+  )
+
+  cat > "$dir/docs/getting-started/quickstart.md" <<EOF
+---
+title: Quickstart
+description: Quickstart.
+section: getting-started
+type: tutorial
+status: stable
+owner: "@platform-core"
+last_reviewed: 2020-01-01
+updated: 2020-01-01
+synced_from: ../../specs/api.yaml
+---
+# Quickstart
+EOF
+
+  local drift_output
+  drift_output=$(run_cli "$dir" doctor 2>&1)
+  assert_contains "$drift_output" "upstream source '../../specs/api.yaml' modified in git since last review"
+
+  rm -rf "$dir"
+}
+
+scenario_20_touch_acknowledges_freshness() {
+  echo "Scenario 20: pageworks touch updates last_reviewed timestamp to today"
+  local dir="/tmp/pageworks-doctor-test-20"
+  setup_docs "$dir"
+
+  # Create a stale page (reviewed in 2020)
+  cat > "$dir/docs/getting-started/quickstart.md" <<EOF
+---
+title: Quickstart
+description: Quickstart.
+section: getting-started
+type: tutorial
+status: stable
+owner: "@platform-core"
+last_reviewed: 2020-01-01
+updated: 2020-01-01
+---
+# Quickstart
+EOF
+
+  local stale_output
+  stale_output=$(run_cli "$dir" doctor 2>&1)
+  assert_contains "$stale_output" "content has not been reviewed in > 180 days"
+
+  # Run pageworks touch to acknowledge freshness
+  local touch_output exit_code=0
+  if touch_output=$(run_cli "$dir" touch getting-started/quickstart 2>&1); then exit_code=0; else exit_code=$?; fi
+  assert_exit "$exit_code" 0 "touch exits 0"
+  assert_contains "$touch_output" "Touched review timestamp"
+
+  # Verify doctor is now clean (staleness cleared)
+  local clean_output
+  clean_output=$(run_cli "$dir" doctor 2>&1)
+  assert_not_contains "$clean_output" "content has not been reviewed in > 180 days"
+  assert_contains "$clean_output" "0 warning(s)"
+
+  rm -rf "$dir"
+}
+
 echo "=== doctor.test.sh ==="
 scenario_1_no_docs
 scenario_2_no_manifest
@@ -412,7 +567,13 @@ scenario_13_broken_internal_link
 scenario_14_deep_nesting_error
 scenario_15_six_core_classes_valid
 scenario_16_doctor_fix_repairs
+scenario_17_extended_classes_valid
+scenario_18_custom_page_type_info
+scenario_19_synced_from_mechanical_drift
+scenario_20_touch_acknowledges_freshness
 
 echo ""
 echo "Results: ${pass_count} passed, ${fail_count} failed"
 exit $((fail_count > 0))
+
+

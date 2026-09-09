@@ -1,0 +1,122 @@
+---
+title: <Cookbook Recipe Title — e.g., "Webhooks with Automatic Retry & Signature Verification">
+description: <One-sentence summary of the end-to-end integration problem and outcome>
+section: <section-id>
+type: cookbook
+status: draft
+owner: <team-or-role — e.g., "@integrations-team">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+---
+
+# <Cookbook Recipe Title>
+
+<Punchline: Implement a production-grade webhook receiver in Node.js or Python that cryptographically verifies HMAC-SHA256 payload signatures and responds with an idempotent 200 OK within 50ms.>
+
+> [!NOTE]
+> **Recipe Prerequisites**:
+> - Webhook signing secret (`whsec_...`) from Developer Dashboard.
+> - Publicly accessible HTTPS URL (use `ngrok http 3000` for local development).
+
+---
+
+## Architecture Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Gateway as API Gateway
+    participant Handler as Webhook Receiver
+    participant Queue as Async Job Queue
+
+    Gateway->>Handler: POST /webhooks (Payload + Signature)
+    Note over Handler: Verify HMAC-SHA256 Header
+    alt Valid Signature
+        Handler->>Queue: Enqueue event for async processing
+        Handler-->>Gateway: 200 OK (immediate)
+    else Invalid Signature
+        Handler-->>Gateway: 400 Bad Request
+    end
+```
+
+---
+
+## Runnable Implementation
+
+=== "Node.js (Express)"
+
+    ```typescript
+    import express from 'express';
+    import crypto from 'crypto';
+
+    const app = express();
+    const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'whsec_test';
+
+    app.post('/webhooks', express.raw({ type: 'application/json' }), (req, res) => {
+      const signature = req.headers['x-signature-sha256'] as string;
+      const expected = crypto
+        .createHmac('sha256', WEBHOOK_SECRET)
+        .update(req.body)
+        .digest('hex');
+
+      if (!crypto.timingSafeEqual(Buffer.from(signature || ''), Buffer.from(expected))) {
+        return res.status(400).send('Invalid webhook signature');
+      }
+
+      const event = JSON.parse(req.body.toString());
+      console.log('Verified event received:', event.id);
+
+      // Acknowledge immediately before executing long-running async jobs
+      res.status(200).json({ received: true });
+    });
+
+    app.listen(3000, () => console.log('Receiver running on :3000'));
+    ```
+
+=== "Python (FastAPI)"
+
+    ```python
+    import hmac
+    import hashlib
+    import os
+    from fastapi import FastAPI, Request, HTTPException, Header
+
+    app = FastAPI()
+    WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "whsec_test").encode()
+
+    @app.post("/webhooks")
+    async def handle_webhook(
+        request: Request,
+        x_signature_sha256: str = Header(None)
+    ):
+        body = await request.body()
+        expected = hmac.new(WEBHOOK_SECRET, body, hashlib.sha256).hexdigest()
+
+        if not x_signature_sha256 or not hmac.compare_digest(x_signature_sha256, expected):
+            raise HTTPException(status_code=400, detail="Invalid signature")
+
+        event = await request.json()
+        print(f"Verified event received: {event.get('id')}")
+        return {"received": True}
+    ```
+
+---
+
+## Verification Test
+
+Send a signed test payload via curl:
+
+```bash
+PAYLOAD='{"event":"order.completed","id":"evt_123"}'
+SECRET='whsec_test'
+SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')
+
+curl -X POST http://localhost:3000/webhooks \
+  -H "Content-Type: application/json" \
+  -H "x-signature-sha256: ${SIGNATURE}" \
+  -d "$PAYLOAD"
+```
+
+```json
+{"received": true}
+```

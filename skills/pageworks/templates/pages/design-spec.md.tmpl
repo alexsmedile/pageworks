@@ -1,0 +1,74 @@
+---
+title: <Component Design Spec — e.g., "Button Component Specification">
+description: <One-sentence summary of component anatomy, tokens, interaction states, and accessibility>
+section: <section-id>
+type: design-spec
+status: draft
+owner: <team-or-role — e.g., "@design-systems">
+last_reviewed: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+---
+
+# <Component Design Spec>
+
+<Punchline: Design tokens, layout anatomy, interactive state behaviors, and WCAG AA accessibility requirements for the standard design system Button component.>
+
+> [!NOTE]
+> **Component Status**: Production Ready (`@org/ui-components@^3.2.0`).
+> Figma Component Library: [Figma Design Tokens & Anatomy](https://figma.com/@org/design-system)
+
+---
+
+## Visual Anatomy
+
+```
+ ┌────────────────────────────────────────────────────────┐
+ │ 1 [Icon Left]   2 [Button Label Text]   3 [Icon Right] │
+ └────────────────────────────────────────────────────────┘
+```
+
+1. **Leading Icon (Optional)**: 16x16 SVG glyph, aligned with text baseline.
+2. **Label Container**: Text node with uppercase or sentence case styling; ellipsis truncation on overflow.
+3. **Trailing Icon (Optional)**: Used for dropdown carets or external link indicators.
+
+---
+
+## Design Tokens & Spacing
+
+| Token Property | Design Token Name | Value | Description |
+|---|---|---|---|
+| **Height** | `--btn-height-md` | `40px` | Standard medium touch target |
+| **Padding (X)** | `--btn-padding-x` | `16px` (1rem) | Horizontal inner gutter |
+| **Border Radius** | `--btn-radius` | `6px` | Match platform card corner radius |
+| **Font Family** | `--font-sans` | `Inter, -apple-system` | Primary UI sans-serif |
+| **Font Size / Weight** | `--btn-font-size` | `14px / 600` | High-scannability semibold weight |
+
+---
+
+## Interactive States
+
+| State | Background Color | Border / Outline | Cursor | Opacity |
+|---|---|---|---|---|
+| **Default** | `var(--md-primary-fg-color)` | `1px solid transparent` | `pointer` | `1.0` |
+| **Hover** | `var(--md-primary-fg-color--light)` | `1px solid transparent` | `pointer` | `1.0` |
+| **Active / Pressed** | `var(--md-primary-fg-color--dark)` | `1px solid transparent` | `pointer` | `0.95` |
+| **Focused** | `var(--md-primary-fg-color)` | `2px solid var(--md-accent-fg-color)` | `pointer` | `1.0` |
+| **Disabled** | `var(--md-default-fg-color--lightest)` | `none` | `not-allowed` | `0.4` |
+
+---
+
+## Best Practices: Do's and Don'ts
+
+| Do ✅ | Don't ❌ |
+|---|---|
+| **Use imperative verbs**: "Save Changes", "Delete Workspace". | **Don't use ambiguous labels**: "OK", "Submit", "Click Here". |
+| **Place destructive buttons away from primary actions**: Add confirmation modal on deletion. | **Don't use primary button style for cancel or dismiss actions**. |
+| **Maintain 44x44px minimum touch target** on mobile viewports. | **Don't disable buttons without providing a helpful tooltip** explaining why. |
+
+---
+
+## Accessibility (a11y) Requirements
+
+- **Contrast Ratio**: Meets WCAG 2.1 AA requirement ($\ge 4.5:1$ text contrast against background).
+- **Keyboard Navigation**: Triggers on `Enter` and `Space`.
+- **Focus Ring**: High-contrast outline visible in both light and dark mode schemes.

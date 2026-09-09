@@ -40,7 +40,7 @@ pageworks --version
 ```
 
 ```
-pageworks 0.2.0
+pageworks 0.4.0
 ```
 
 ### 2. Install as a Claude Code Plugin

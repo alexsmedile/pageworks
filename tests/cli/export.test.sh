@@ -179,7 +179,7 @@ scenario_8_unknown_renderer() {
   setup_docs "$dir"
 
   local output exit_code=0
-  if output=$(run_cli "$dir" export mintlify 2>&1); then exit_code=0; else exit_code=$?; fi
+  if output=$(run_cli "$dir" export fumadocs 2>&1); then exit_code=0; else exit_code=$?; fi
 
   if [[ $exit_code -ne 0 ]]; then pass_count=$((pass_count + 1))
   else echo "    ✗ expected non-zero exit"; fail_count=$((fail_count + 1)); fi
@@ -292,9 +292,37 @@ scenario_14_docusaurus_package_and_css() {
   assert_file_exists "$dir/src/css/custom.css"
   assert_file_contains "$dir/package.json" "@docusaurus/core"
   assert_file_contains "$dir/package.json" "@docusaurus/preset-classic"
+  assert_file_contains "$dir/package.json" "@docusaurus/theme-mermaid"
   assert_file_contains "$dir/docusaurus.config.js" "routeBasePath: '/'"
+  assert_file_contains "$dir/docusaurus.config.js" "theme-mermaid"
 
   rm -rf "$dir"
+}
+
+scenario_15_mintlify_export() {
+  echo "Scenario 15: export mintlify generates mint.json and workflow"
+  local dir="/tmp/pageworks-export-test-15"
+  setup_docs "$dir"
+
+  local output exit_code=0
+  if output=$(run_cli "$dir" export mintlify 2>&1); then exit_code=0; else exit_code=$?; fi
+
+  assert_exit "$exit_code" 0 "export mintlify exits 0"
+  assert_file_exists "$dir/mint.json"
+  assert_file_exists "$dir/.github/workflows/docs-mintlify.yml"
+  assert_file_contains "$dir/mint.json" "https://mintlify.com/schema.json"
+  assert_file_contains "$dir/mint.json" "docs/getting-started/install"
+  assert_file_contains "$dir/mint.json" "docs/index"
+  assert_file_contains "$dir/.github/workflows/docs-mintlify.yml" "npx mintlify broken-links"
+
+  # Test --no-workflow skips the workflow
+  local dir_nw="/tmp/pageworks-export-test-15-nw"
+  setup_docs "$dir_nw"
+  run_cli "$dir_nw" export mintlify --no-workflow >/dev/null
+  assert_file_exists "$dir_nw/mint.json"
+  assert_file_absent "$dir_nw/.github/workflows/docs-mintlify.yml"
+
+  rm -rf "$dir" "$dir_nw"
 }
 
 echo "=== export.test.sh ==="
@@ -312,6 +340,7 @@ scenario_11_docusaurus_drops_empty_sections
 scenario_12_renderers_block_consumed
 scenario_13_mkdocs_mermaid_and_features
 scenario_14_docusaurus_package_and_css
+scenario_15_mintlify_export
 
 echo ""
 echo "Results: ${pass_count} passed, ${fail_count} failed"
