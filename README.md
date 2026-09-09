@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Claude%20%7C%20Codex%20%7C%20Antigravity-orange.svg)](#install)
 [![CI Quality Gate](https://img.shields.io/badge/CI%20Quality-5--Layer%20Automated-brightgreen.svg)](#-5-layer-automated-ci-quality-gates)
-[![Tests](https://img.shields.io/badge/tests-216%20passing-success.svg)](#-test-harness)
+[![Tests](https://img.shields.io/badge/tests-219%20passing-success.svg)](#-test-harness)
 
 <p align="center">
   <a href="#-why-pageworks">Why Pageworks</a> •

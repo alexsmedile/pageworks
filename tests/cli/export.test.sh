@@ -325,6 +325,40 @@ scenario_15_mintlify_export() {
   rm -rf "$dir" "$dir_nw"
 }
 
+scenario_16_mkdocs_colon_in_titles() {
+  echo "Scenario 16: mkdocs quotes titles with colons for valid YAML"
+  local dir="/tmp/pageworks-export-test-16"
+  setup_docs "$dir"
+
+  # Create a page with a colon in its frontmatter title in getting-started/
+  cat > "$dir/docs/getting-started/adr-1.md" << 'EOF'
+---
+title: "ADR 0001: Architecture Decision"
+type: adr
+owner: "@team"
+last_reviewed: "2026-09-09"
+---
+# ADR 0001
+EOF
+
+  # Declare page in manifest
+  sed -i '' 's/pages: \[install, quickstart, concepts\]/pages: [install, quickstart, concepts, adr-1]/' "$dir/docs/docs.yaml" 2>/dev/null || \
+  sed -i 's/pages: \[install, quickstart, concepts\]/pages: [install, quickstart, concepts, adr-1]/' "$dir/docs/docs.yaml"
+
+  run_cli "$dir" export mkdocs --force >/dev/null
+
+  assert_file_exists "$dir/mkdocs.yml"
+  assert_file_contains "$dir/mkdocs.yml" '"ADR 0001: Architecture Decision": getting-started/adr-1.md'
+  if ruby -ryaml -e "YAML.load_file('$dir/mkdocs.yml')" >/dev/null 2>&1; then
+    pass_count=$((pass_count + 1))
+  else
+    echo "    ✗ mkdocs.yml failed YAML syntax validation"
+    fail_count=$((fail_count + 1))
+  fi
+
+  rm -rf "$dir"
+}
+
 echo "=== export.test.sh ==="
 scenario_1_no_renderer
 scenario_2_mkdocs
@@ -341,6 +375,7 @@ scenario_12_renderers_block_consumed
 scenario_13_mkdocs_mermaid_and_features
 scenario_14_docusaurus_package_and_css
 scenario_15_mintlify_export
+scenario_16_mkdocs_colon_in_titles
 
 echo ""
 echo "Results: ${pass_count} passed, ${fail_count} failed"

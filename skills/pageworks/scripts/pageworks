@@ -480,7 +480,11 @@ docs_export_mkdocs() {
   while IFS=$'\t' read -r sec_id sec_title sec_order sec_pages; do
     [[ -z "$sec_id" ]] && continue
     [[ -z "$sec_pages" ]] && continue
-    nav_lines+="  - ${sec_title}:
+    local formatted_sec="$sec_title"
+    if [[ "$sec_title" == *:* ]]; then
+      formatted_sec="\"${sec_title//\"/\\\"}\""
+    fi
+    nav_lines+="  - ${formatted_sec}:
 "
     IFS=',' read -r -a page_arr <<< "$sec_pages"
     for page in "${page_arr[@]}"; do
@@ -488,7 +492,11 @@ docs_export_mkdocs() {
       local page_file="docs/${sec_id}/${page}.md"
       local page_title
       page_title="$(docs_page_title "$page_file" "$page")"
-      nav_lines+="      - ${page_title}: ${sec_id}/${page}.md
+      local formatted_page="$page_title"
+      if [[ "$page_title" == *:* ]]; then
+        formatted_page="\"${page_title//\"/\\\"}\""
+      fi
+      nav_lines+="      - ${formatted_page}: ${sec_id}/${page}.md
 "
     done
   done < <(docs_yaml_sections "$manifest")
@@ -498,7 +506,11 @@ docs_export_mkdocs() {
     local extra_file="docs/${extra}.md"
     local extra_title
     extra_title="$(docs_page_title "$extra_file" "$extra")"
-    nav_lines+="  - ${extra_title}: ${extra}.md
+    local formatted_extra="$extra_title"
+    if [[ "$extra_title" == *:* ]]; then
+      formatted_extra="\"${extra_title//\"/\\\"}\""
+    fi
+    nav_lines+="  - ${formatted_extra}: ${extra}.md
 "
   done < <(docs_yaml_extras "$manifest")
 

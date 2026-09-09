@@ -21,6 +21,9 @@ theme:
     - search.highlight
     - content.code.copy
 
+extra_css:
+  - stylesheets/custom.css
+
 markdown_extensions:
   - admonition
   - toc:
@@ -46,13 +49,13 @@ nav:
       - Core Concepts: getting-started/concepts.md
   - Architecture & System Design:
       - Architecture Overview: architecture/overview.md
-      - ADR 0001: Migration to Spectacular v2: architecture/0001-spectacular-v2-migration.md
+      - "ADR 0001: Migration to Spectacular v2": architecture/0001-spectacular-v2-migration.md
   - Services & Components:
       - CLI Binary — Service Catalog: services/cli.md
       - Skill Engine — Service Catalog: services/skill-engine.md
   - Operations & Reliability:
-      - Runbook: Exporting & Deploying Documentation: operations/export-runbook.md
-      - Runbook: 180-Day Stale Content Auditing: operations/maintenance-audit.md
+      - "Runbook: Exporting & Deploying Documentation": operations/export-runbook.md
+      - "Runbook: 180-Day Stale Content Auditing": operations/maintenance-audit.md
   - API & Data Reference:
       - CLI Command Reference: reference/cli-reference.md
       - docs.yaml Manifest Schema: reference/manifest-schema.md
