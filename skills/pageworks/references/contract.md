@@ -36,6 +36,7 @@ docs/
 1. **Maximum 3-Level Depth**: Root (`docs/`) $\to$ Topic Section (`getting-started/`) $\to$ Page (`install.md`). Do not create deeply nested directories. Sub-grouping is managed in `docs.yaml`.
 2. **Domain/Workflow Organization**: Organize folders by service, domain, or workflow—never by volatile team hierarchies (teams change; system boundaries rarely do).
 3. **Dedicated "Start Here" Landing Pages**: Every root `index.md` must list system purpose, explicit owners (team/channel), Mermaid architecture diagram, repository links, and dev environment prerequisites.
+4. **Scope & Purpose of `docs/`**: `docs/` is strictly the published documentation surface for end users, API/CLI consumers, operators, and contributors. It is NOT a repository for internal product specifications, active implementation plans, internal task tracking, or working notes. Internal technical specifications belong in dedicated specification folders (e.g. `specs/`, `design/`, or internal workspace directories), and public doc pages derive or sync from them via `synced_from:`.
 
 ---
 
@@ -111,7 +112,7 @@ owner: "@platform-core"
 last_reviewed: 2026-08-22
 updated: 2026-08-22
 since: 1.0.0
-synced_from: ../../../.spectacular/contracts/CC-cli.md
+synced_from: ../../../specs/cli-spec.md
 ---
 ```
 

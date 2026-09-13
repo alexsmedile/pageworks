@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+### Changed
+- **Boundary & Scope Clarification for `docs/`**:
+  - Formalized strict demarcation between user-facing / published documentation in `docs/` and internal engineering specifications, PRDs, task trackers, or workspace state.
+  - Added "Scope & Boundaries: What Belongs in `docs/`" reference matrix to `docs/getting-started/concepts.md` comparing Audience, Artifacts, and Lifecycle.
+  - Added Step 0 (Scope Pre-Check) to `pageworks new` authoring flow in `skills/pageworks/references/authoring.md` to prevent authoring internal specs into the published docs tree.
+  - Added Rule 4 (Scope & Purpose of `docs/`) to the Information Architecture specification in `skills/pageworks/references/contract.md`.
+  - Added prominent scope boundary callout to `skills/pageworks/SKILL.md` and updated negative triggers to exclude internal product specifications and technical execution plans.
+  - Decoupled skill metadata and examples from external framework citations, generalizing upstream spec sources (`specs/*.md`, `design/*.md`, `contracts/*.md`) in `skills/pageworks/references/maintenance.md` and `skills/pageworks/references/contract.md`.
+
 ---
 
 ## [0.4.0] — 2026-09-09 — Mintlify Adapter, Touch Freshness, Extensible Taxonomy & Docs Overhaul

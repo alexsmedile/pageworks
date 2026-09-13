@@ -5,8 +5,8 @@ description: |
   Dual-Dimension Architecture (extensible page classes + 6 topic categories). Triggers on: "init docs",
   "scaffold documentation", "create tutorial", "new ADR", "add runbook", "review docs", "audit stale documentation",
   "docs drift", "pageworks touch", "pageworks doctor", "export to MkDocs/Docusaurus/Mintlify".
-  Do NOT trigger for repository README.md, work-item tracking docs (CHANGELOG.md, TODO.md), or code docstrings.
-compatibility: "spectacular >= 2.0.0"
+  Do NOT trigger for internal product specifications, technical PRDs/specs in progress, workspace planning,
+  repository root README.md, work-item tracking docs (CHANGELOG.md, TODO.md), or code docstrings.
 metadata:
   version: "0.4.0"
   category: "devtools"
@@ -17,6 +17,11 @@ metadata:
 # Pageworks
 
 Orchestrator for public-facing software & platform documentation (`docs/`). Standalone skill package with bundled deterministic scripts.
+
+> [!IMPORTANT]
+> **Scope Boundary: What Belongs in `docs/`**
+> - **In-Scope (`docs/`)**: User-facing and developer-facing documentation published for users, integrators, contributors, and operators (onboarding walkthroughs, public architecture overviews, accepted ADRs, service catalog pages, operational runbooks, API/CLI reference specs, and coding standards).
+> - **Out-of-Scope (`docs/`)**: Internal product specifications, technical PRDs/RFCs in progress, task/work-item trackers, internal workspace state, and working notes. These belong in dedicated specification folders (e.g. `specs/` or internal workspace directories), never in the published `docs/` tree.
 
 ## 1. Quick Guard & Off-Switch
 

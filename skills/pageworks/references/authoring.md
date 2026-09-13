@@ -24,6 +24,9 @@ Use this when: Scaffolding new documentation pages, choosing template classes, d
 ## 1. `pageworks new <page>` Flow
 
 ### Steps
+0. **Scope Pre-Check (`docs/` Boundary)**:
+   - Verify that the target document is **user-facing or developer-facing documentation** meant for the published documentation surface in `docs/` (e.g. onboarding guide, tutorial, API reference, public runbook, public ADR, service entry).
+   - If the request is for an **internal product specification** (PRD, feature spec), technical execution plan, sprint backlog, or working scratchpad: **DO NOT scaffold into `docs/`**. Direct the author to place it in the appropriate internal specs or workspace planning location (e.g. `specs/`, `design/`, or project root).
 1. **Resolve Slug & Section**:
    - Slug: Kebab-case without `.md` extension.
    - Section: Assign to one of the 6 Topic Categories (`getting-started`, `architecture`, `services`, `operations`, `reference`, `standards`) or an existing declared section in `docs.yaml`.

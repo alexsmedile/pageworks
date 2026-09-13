@@ -62,7 +62,7 @@ flowchart TD
 
 ## 3. The `synced_from:` Pattern
 
-When a public doc page derives from an internal contract, spec, or code module (e.g. `.spectacular/contracts/CC-*.md` or `cli/pageworks`), declare the source in frontmatter:
+When a public doc page derives from an internal technical spec, architecture contract, or code module (e.g. `specs/*.md`, `design/*.md`, or `cli/pageworks`), declare the source in frontmatter:
 
 ```yaml
 ---
@@ -83,11 +83,11 @@ Pageworks automatically queries Git history: if `cli/pageworks` was committed af
 ⚠️  docs/reference/cli-reference.md — upstream source '../../../cli/pageworks' modified in git since last review (14 day(s) drift)
 ```
 
-### Recognized Spec Sources
-1. Spectacular Core Anchors: `PROJECT.md`, `STACK.md`, `ARCHITECTURE.md`
-2. Spectacular Capability Contracts: `.spectacular/contracts/CC-*.md`
+### Recognized Upstream Spec & Code Sources
+1. Internal Design & Requirements Specs: `specs/*.md`, `design/*.md`, `PRD.md`
+2. Technical Architecture & Capability Contracts: `contracts/*.md`, `rfc/*.md`
 3. OpenAPI / JSON Schemas: `schemas/*.json`, `openapi.yaml`
-4. Code Modules & CLI binaries: `cli/*`, `src/*`
+4. Code Modules & CLI binaries: `cli/*`, `src/*`, `lib/*`
 
 ---
 

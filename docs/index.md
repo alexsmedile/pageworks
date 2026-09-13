@@ -20,7 +20,7 @@ Welcome to the **Pageworks** software and platform documentation. Pageworks is a
 | **Owning Team** | Platform Core (`@platform-core`) |
 | **Slack Channel** | `#dev-pageworks` |
 | **Source Repository** | [github.com/alexsmedile/pageworks](https://github.com/alexsmedile/pageworks) |
-| **Compatible With** | Claude Code, Codex, Antigravity, Spectacular $\ge$ 2.0.0 |
+| **Compatible With** | Claude Code, Codex, Antigravity |
 | **License** | MIT |
 
 ## System Topology & Architecture

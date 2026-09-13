@@ -74,7 +74,19 @@ The filesystem and navigation sidebars are structured into 6 predictable top-lev
 
 ---
 
-## 3. The Docs-as-Code Model
+## 3. Scope & Boundaries: What Belongs in `docs/`
+
+Pageworks enforces a clear boundary between **public, published documentation** (the `docs/` tree) and **internal engineering specifications or task tracking**:
+
+| Dimension | In-Scope (`docs/`) | Out-of-Scope (External to `docs/`) |
+|---|---|---|
+| **Audience** | End users, API/CLI consumers, external integrators, on-call operators, and contributors. | Core development team, active sprint planners, and autonomous agents. |
+| **Artifacts** | • Step-by-step onboarding walkthroughs (`getting-started/`)<br>• System topology & accepted ADRs (`architecture/`)<br>• Service catalog one-pagers (`services/`)<br>• Operational runbooks & postmortems (`operations/`)<br>• Formal API contracts & CLI manuals (`reference/`)<br>• Team coding standards & checklists (`standards/`) | • Internal product requirements documents (PRDs)<br>• Active feature implementation specs & task tracking<br>• In-progress RFC drafts, brainstorms, and scratchpads<br>• Internal agent/workspace state & configuration<br>• Root project meta (`README.md`, `CHANGELOG.md`, `TODO.md`) |
+| **Lifecycle** | Governed, versioned in Git, exported to static sites, audited for staleness. | Tracked in dedicated spec directories (e.g. `specs/`, `design/`) or repo root. |
+
+---
+
+## 4. The Docs-as-Code Model
 
 All documentation is stored as portable Markdown in Git alongside application code. Pageworks decouples your source content from any single static site generator:
 
